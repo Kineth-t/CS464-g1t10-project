@@ -37,7 +37,7 @@ export default function Login() {
       <div className="w-full max-w-sm">
         <div className="flex justify-center mb-6">
           <div className="flex items-center gap-2 font-bold text-xl">
-            <Smartphone className="h-6 w-6" /> PhoneStore
+            <Smartphone className="h-6 w-6" /> Ringr Mobile
           </div>
         </div>
         <Card>

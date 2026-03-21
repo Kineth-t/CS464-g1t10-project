@@ -26,7 +26,7 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 font-bold text-lg">
           <Smartphone className="h-5 w-5" />
-          PhoneStore
+          Ringr Mobile
         </Link>
 
         <nav className="flex items-center gap-1">
