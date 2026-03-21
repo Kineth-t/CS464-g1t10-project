@@ -2,16 +2,17 @@ package service
 
 import (
 	"errors"
+
 	"github.com/Kineth-t/CS464-g1t10-project/internal/model"
 	"github.com/Kineth-t/CS464-g1t10-project/internal/repository"
 )
 
 type CartService struct {
-	cartRepo  *repository.CartRepository
-	phoneRepo *repository.PhoneRepository
+	cartRepo  repository.CartRepo
+	phoneRepo repository.PhoneRepo
 }
 
-func NewCartService(cartRepo *repository.CartRepository, phoneRepo *repository.PhoneRepository) *CartService {
+func NewCartService(cartRepo repository.CartRepo, phoneRepo repository.PhoneRepo) *CartService {
 	return &CartService{cartRepo: cartRepo, phoneRepo: phoneRepo}
 }
 

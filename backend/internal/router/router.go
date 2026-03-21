@@ -2,21 +2,22 @@ package router
 
 import (
 	"net/http"
-	"github.com/Kineth-t/CS464-g1t10-project/internal/middleware"
+
 	"github.com/Kineth-t/CS464-g1t10-project/internal/handler"
+	"github.com/Kineth-t/CS464-g1t10-project/internal/middleware"
 )
 
 func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHandler) http.Handler {
 	mux := http.NewServeMux()
 
-	// Phone routes (public)
+	// Phone routes
 	mux.HandleFunc("/phones", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method {
 		case http.MethodGet:
 			ph.ListPhones(w, r)
 		case http.MethodPost:
-			ph.CreatePhone(w, r)
+			middleware.RequireAdmin(http.HandlerFunc(ph.CreatePhone)).ServeHTTP(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -27,9 +28,9 @@ func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHa
 		case http.MethodGet:
 			ph.GetPhone(w, r)
 		case http.MethodPut:
-			ph.UpdatePhone(w, r)
+			middleware.RequireAdmin(http.HandlerFunc(ph.UpdatePhone)).ServeHTTP(w, r)
 		case http.MethodDelete:
-			ph.DeletePhone(w, r)
+			middleware.RequireAdmin(http.HandlerFunc(ph.DeletePhone)).ServeHTTP(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}

@@ -7,15 +7,16 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+
 	"github.com/Kineth-t/CS464-g1t10-project/internal/model"
 	"github.com/Kineth-t/CS464-g1t10-project/internal/repository"
 )
 
 type AuthService struct {
-	repo *repository.UserRepository
+	repo repository.UserRepo
 }
 
-func NewAuthService(repo *repository.UserRepository) *AuthService {
+func NewAuthService(repo repository.UserRepo) *AuthService {
 	return &AuthService{repo: repo}
 }
 
@@ -32,6 +33,7 @@ func (s *AuthService) Register(username, password, phoneNumber string, address m
 		Password:    string(hash),
 		PhoneNumber: phoneNumber,
 		Address:     address,
+		Role:        model.RoleCustomer,
 	})
 }
 
@@ -46,6 +48,7 @@ func (s *AuthService) Login(username, password string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id":  user.ID,
 		"username": user.Username,
+		"role":     user.Role,
 		"exp":      time.Now().Add(24 * time.Hour).Unix(),
 	})
 	return token.SignedString([]byte(jwtSecret()))
@@ -54,7 +57,7 @@ func (s *AuthService) Login(username, password string) (string, error) {
 func jwtSecret() string {
 	s := os.Getenv("JWT_SECRET")
 	if s == "" {
-		return "this-is-just-for-local-change-for-production"
+		return "change-me-in-production"
 	}
 	return s
 }

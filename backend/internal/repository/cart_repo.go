@@ -3,8 +3,17 @@ package repository
 import (
 	"errors"
 	"sync"
+
 	"github.com/Kineth-t/CS464-g1t10-project/internal/model"
 )
+
+type CartRepo interface {
+	GetOrCreateActiveCart(userID int) model.Cart
+	GetCartByUser(userID int) (model.Cart, error)
+	AddItem(item model.CartItem) model.CartItem
+	RemoveItem(itemID, cartID int) error
+	CheckoutCart(cartID int) error
+}
 
 type CartRepository struct {
 	mu       sync.RWMutex

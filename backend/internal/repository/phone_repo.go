@@ -3,8 +3,17 @@ package repository
 import (
 	"errors"
 	"sync"
+
 	"github.com/Kineth-t/CS464-g1t10-project/internal/model"
 )
+
+type PhoneRepo interface {
+	GetAll() []model.Phone
+	GetByID(id int) (model.Phone, error)
+	Create(p model.Phone) model.Phone
+	Update(p model.Phone) error
+	Delete(id int) error
+}
 
 type PhoneRepository struct {
 	mu     sync.RWMutex

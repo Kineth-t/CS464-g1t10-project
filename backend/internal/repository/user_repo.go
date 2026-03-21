@@ -3,8 +3,14 @@ package repository
 import (
 	"errors"
 	"sync"
+
 	"github.com/Kineth-t/CS464-g1t10-project/internal/model"
 )
+
+type UserRepo interface {
+	Create(u model.User) (model.User, error)
+	FindByUsername(username string) (model.User, error)
+}
 
 type UserRepository struct {
 	mu     sync.RWMutex

@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+
 	"github.com/Kineth-t/CS464-g1t10-project/internal/model"
 	"github.com/Kineth-t/CS464-g1t10-project/internal/service"
 )
@@ -17,9 +18,9 @@ func NewAuthHandler(s *service.AuthService) *AuthHandler {
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Username    string         `json:"username"`
-		Password    string         `json:"password"`
-		PhoneNumber string         `json:"phone_number"`
+		Username    string        `json:"username"`
+		Password    string        `json:"password"`
+		PhoneNumber string        `json:"phone_number"`
 		Address     model.Address `json:"address"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
