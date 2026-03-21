@@ -7,7 +7,8 @@ CREATE TABLE users (
     city        VARCHAR(100),
     state       VARCHAR(100),
     country     VARCHAR(100),
-    zip_code    VARCHAR(20)
+    zip_code    VARCHAR(20),
+    role        VARCHAR(20) NOT NULL DEFAULT 'customer'
 );
 
 CREATE TABLE phones (

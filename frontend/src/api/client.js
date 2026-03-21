@@ -11,10 +11,11 @@ async function request(path, options = {}) {
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = { error: text }; }
 
   if (!res.ok) {
-    const msg = data?.error || data?.message || `Request failed (${res.status})`;
+    const msg = data?.error || data?.message || text || `Request failed (${res.status})`;
     throw new Error(msg);
   }
   return data;
@@ -30,7 +31,7 @@ export const authAPI = {
 
 // Phones
 export const phonesAPI = {
-  list: () => request('/phones'),
+  list: () => request('/phones').then((data) => data ?? []),
   get: (id) => request(`/phones/${id}`),
   create: (payload) => request('/phones', { method: 'POST', body: JSON.stringify(payload) }),
   update: (id, payload) => request(`/phones/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
