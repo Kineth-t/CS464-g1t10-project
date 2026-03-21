@@ -2,6 +2,13 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { phonesAPI, cartAPI } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { ArrowLeft, ShoppingCart, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function PhoneDetail() {
   const { id } = useParams();
@@ -11,7 +18,7 @@ export default function PhoneDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [quantity, setQuantity] = useState(1);
-  const [feedback, setFeedback] = useState('');
+  const [feedback, setFeedback] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -24,56 +31,102 @@ export default function PhoneDetail() {
   async function handleAddToCart() {
     if (!isAuthenticated) { navigate('/login'); return; }
     setSubmitting(true);
-    setFeedback('');
+    setFeedback(null);
     try {
       await cartAPI.add(phone.id, quantity);
-      setFeedback('Added to cart!');
+      setFeedback({ ok: true, msg: 'Added to cart!' });
     } catch (e) {
-      setFeedback(e.message);
+      setFeedback({ ok: false, msg: e.message });
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (loading) return <div className="container"><p className="text-muted">Loading...</p></div>;
-  if (error) return <div className="container"><p className="text-error">{error}</p></div>;
-  if (!phone) return null;
+  if (loading) return (
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="animate-pulse space-y-4">
+        <div className="h-6 bg-muted rounded w-24" />
+        <div className="h-8 bg-muted rounded w-64" />
+        <div className="h-4 bg-muted rounded w-32" />
+      </div>
+    </div>
+  );
 
+  if (error) return (
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive text-sm flex items-center gap-2">
+        <AlertCircle className="h-4 w-4" /> {error}
+      </div>
+    </div>
+  );
+
+  if (!phone) return null;
   const outOfStock = phone.stock === 0;
 
   return (
-    <div className="container">
-      <button className="btn btn-outline btn-sm back-btn" onClick={() => navigate(-1)}>← Back</button>
-      <div className="phone-detail">
-        <div className="phone-detail-info">
-          <h1 className="phone-detail-title">{phone.brand} {phone.model}</h1>
-          <p className="phone-detail-price">${Number(phone.price).toFixed(2)}</p>
-          <p className={`phone-detail-stock ${outOfStock ? 'out-of-stock' : 'in-stock'}`}>
-            {outOfStock ? 'Out of stock' : `${phone.stock} units available`}
-          </p>
-          {phone.description && <p className="phone-detail-desc">{phone.description}</p>}
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <Button variant="ghost" size="sm" className="mb-6 -ml-2" onClick={() => navigate(-1)}>
+        <ArrowLeft className="h-4 w-4 mr-1" /> Back
+      </Button>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="md:col-span-2 space-y-4">
+          <div>
+            <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">{phone.brand}</p>
+            <h1 className="text-3xl font-bold mt-1">{phone.model}</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-4xl font-bold">${Number(phone.price).toFixed(2)}</span>
+            {outOfStock
+              ? <Badge variant="destructive">Out of stock</Badge>
+              : <Badge variant="secondary">{phone.stock} units available</Badge>
+            }
+          </div>
+          {phone.description && (
+            <>
+              <Separator />
+              <p className="text-muted-foreground leading-relaxed">{phone.description}</p>
+            </>
+          )}
         </div>
-        <div className="phone-detail-actions">
-          <label className="qty-label">
-            Quantity
-            <input
-              type="number"
-              className="qty-input"
-              min={1}
-              max={phone.stock}
-              value={quantity}
-              disabled={outOfStock}
-              onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
-            />
-          </label>
-          <button
-            className="btn btn-primary"
-            onClick={handleAddToCart}
-            disabled={outOfStock || submitting}
-          >
-            {submitting ? 'Adding...' : 'Add to Cart'}
-          </button>
-          {feedback && <p className={feedback.includes('!') ? 'text-success' : 'text-error'}>{feedback}</p>}
+
+        <div>
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="qty">Quantity</Label>
+                <Input
+                  id="qty"
+                  type="number"
+                  min={1}
+                  max={phone.stock}
+                  value={quantity}
+                  disabled={outOfStock}
+                  onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                  className="w-24"
+                />
+              </div>
+              <Button
+                className="w-full"
+                onClick={handleAddToCart}
+                disabled={outOfStock || submitting}
+              >
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                {submitting ? 'Adding...' : outOfStock ? 'Out of Stock' : 'Add to Cart'}
+              </Button>
+              {feedback && (
+                <div className={`flex items-center gap-2 text-sm ${feedback.ok ? 'text-green-600' : 'text-destructive'}`}>
+                  {feedback.ok ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                  {feedback.msg}
+                </div>
+              )}
+              {!isAuthenticated && (
+                <p className="text-xs text-muted-foreground text-center">
+                  <button onClick={() => navigate('/login')} className="underline">Login</button> to add to cart
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
