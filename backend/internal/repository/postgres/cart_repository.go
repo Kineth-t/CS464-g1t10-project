@@ -69,16 +69,18 @@ func (r *CartRepository) GetCartByUser(userID int) (model.Cart, error) {
 	return cart, nil
 }
 
-// AddItem inserts a new item into cart_items table
+// AddItem inserts a new item into cart_items, or increments quantity if it already exists
 func (r *CartRepository) AddItem(item model.CartItem) model.CartItem {
 
-	// Insert item and return generated ID
+	// Upsert: if (cart_id, phone_id) already exists, add to quantity; otherwise insert
 	r.db.QueryRow(context.Background(),
 		`INSERT INTO cart_items (cart_id, phone_id, quantity, price)
-		 VALUES ($1, $2, $3, $4) 
-		 RETURNING id`,
+		 VALUES ($1, $2, $3, $4)
+		 ON CONFLICT (cart_id, phone_id)
+		 DO UPDATE SET quantity = cart_items.quantity + EXCLUDED.quantity
+		 RETURNING id, quantity`,
 		item.CartID, item.PhoneID, item.Quantity, item.Price,
-	).Scan(&item.ID)
+	).Scan(&item.ID, &item.Quantity)
 
 	return item
 }

@@ -31,5 +31,6 @@ CREATE TABLE cart_items (
     cart_id  INT NOT NULL REFERENCES carts(id) ON DELETE CASCADE,
     phone_id INT NOT NULL REFERENCES phones(id),
     quantity INT NOT NULL,
-    price    NUMERIC(10,2) NOT NULL
+    price    NUMERIC(10,2) NOT NULL,
+    UNIQUE (cart_id, phone_id)
 );
