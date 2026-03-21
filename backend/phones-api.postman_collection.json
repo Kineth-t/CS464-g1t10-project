@@ -1,0 +1,782 @@
+{
+  "info": {
+    "name": "Phones API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "customerToken", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "phoneId", "value": "" },
+    { "key": "cartItemId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Has user id', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.id).to.be.a('number');",
+                  "});",
+                  "pm.test('Role is customer', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.role).to.eql('customer');",
+                  "});",
+                  "pm.test('Has address', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.address).to.be.an('object');",
+                  "  pm.expect(res.address.city).to.eql('Singapore');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"customer1\",\n  \"password\": \"secret123\",\n  \"phone_number\": \"+6591234567\",\n  \"address\": {\n    \"street\": \"123 Orchard Road\",\n    \"city\": \"Singapore\",\n    \"state\": \"\",\n    \"country\": \"Singapore\",\n    \"zip_code\": \"238858\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Register - duplicate username",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"customer1\",\n  \"password\": \"secret123\",\n  \"phone_number\": \"+6591234567\",\n  \"address\": {\n    \"street\": \"123 Orchard Road\",\n    \"city\": \"Singapore\",\n    \"state\": \"\",\n    \"country\": \"Singapore\",\n    \"zip_code\": \"238858\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Register - missing username",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"\",\n  \"password\": \"secret123\",\n  \"phone_number\": \"+6591234567\",\n  \"address\": {\n    \"street\": \"123 Orchard Road\",\n    \"city\": \"Singapore\",\n    \"state\": \"\",\n    \"country\": \"Singapore\",\n    \"zip_code\": \"238858\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Login customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has token', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.token).to.be.a('string');",
+                  "  pm.collectionVariables.set('customerToken', res.token);",
+                  "  console.log('Customer token saved');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"customer1\",\n  \"password\": \"secret123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login - wrong password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"customer1\",\n  \"password\": \"wrongpassword\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login - unknown user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"nobody\",\n  \"password\": \"secret123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has token', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.token).to.be.a('string');",
+                  "  pm.collectionVariables.set('adminToken', res.token);",
+                  "  console.log('Admin token saved');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"your-admin-password\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phones",
+      "item": [
+        {
+          "name": "Create phone (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Phone saved and ID stored', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.id).to.be.a('number');",
+                  "  pm.collectionVariables.set('phoneId', res.id);",
+                  "  console.log('Phone ID saved:', res.id);",
+                  "});",
+                  "pm.test('Has correct fields', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.brand).to.eql('Apple');",
+                  "  pm.expect(res.model).to.eql('iPhone 15');",
+                  "  pm.expect(res.price).to.eql(1299);",
+                  "  pm.expect(res.stock).to.eql(50);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/phones",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": 1299.00,\n  \"stock\": 50,\n  \"description\": \"Latest iPhone model\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create phone - no token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/phones",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": 1299.00,\n  \"stock\": 50,\n  \"description\": \"No token\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create phone - forbidden (customer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" }
+            ],
+            "url": "{{baseUrl}}/phones",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"Samsung\",\n  \"model\": \"Galaxy S24\",\n  \"price\": 999.00,\n  \"stock\": 30,\n  \"description\": \"Should be forbidden\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create phone - invalid price",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/phones",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": -100,\n  \"stock\": 50,\n  \"description\": \"Bad price\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create phone - negative stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/phones",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": 999.00,\n  \"stock\": -5,\n  \"description\": \"Bad stock\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List phones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res).to.be.an('array');",
+                  "  pm.expect(res.length).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/phones"
+          }
+        },
+        {
+          "name": "Get phone",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Correct phone returned', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.id).to.eql(pm.collectionVariables.get('phoneId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/phones/{{phoneId}}"
+          }
+        },
+        {
+          "name": "Get phone - not found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/phones/999999"
+          }
+        },
+        {
+          "name": "Update phone (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Price updated', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.price).to.eql(1199);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/phones/{{phoneId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": 1199.00,\n  \"stock\": 45,\n  \"description\": \"Price dropped\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update phone - forbidden (customer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" }
+            ],
+            "url": "{{baseUrl}}/phones/{{phoneId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": 1.00,\n  \"stock\": 45,\n  \"description\": \"Should be forbidden\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Purchase phone",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Success message', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.message).to.eql('purchase successful');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/purchase",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_id\": {{phoneId}},\n  \"quantity\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Purchase phone - insufficient stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/purchase",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_id\": {{phoneId}},\n  \"quantity\": 999999\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete phone - forbidden (customer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
+            "url": "{{baseUrl}}/phones/{{phoneId}}"
+          }
+        },
+        {
+          "name": "Delete phone (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/phones/{{phoneId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "item": [
+        {
+          "name": "Get cart - unauthenticated",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/cart"
+          }
+        },
+        {
+          "name": "Add to cart",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Cart item saved', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.id).to.be.a('number');",
+                  "  pm.expect(res.phone_id).to.eql(pm.collectionVariables.get('phoneId'));",
+                  "  pm.expect(res.quantity).to.eql(2);",
+                  "  pm.collectionVariables.set('cartItemId', res.id);",
+                  "  console.log('Cart item ID saved:', res.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" }
+            ],
+            "url": "{{baseUrl}}/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_id\": {{phoneId}},\n  \"quantity\": 2\n}"
+            }
+          }
+        },
+        {
+          "name": "Add to cart - unauthenticated",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_id\": {{phoneId}},\n  \"quantity\": 2\n}"
+            }
+          }
+        },
+        {
+          "name": "Add to cart - insufficient stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" }
+            ],
+            "url": "{{baseUrl}}/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_id\": {{phoneId}},\n  \"quantity\": 999999\n}"
+            }
+          }
+        },
+        {
+          "name": "Add to cart - phone not found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" }
+            ],
+            "url": "{{baseUrl}}/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_id\": 999999,\n  \"quantity\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Get cart",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Cart has items', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.items).to.be.an('array');",
+                  "  pm.expect(res.items.length).to.be.above(0);",
+                  "  pm.expect(res.status).to.eql('active');",
+                  "  pm.expect(res.user_id).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
+            "url": "{{baseUrl}}/cart"
+          }
+        },
+        {
+          "name": "Checkout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Checkout successful', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.message).to.eql('checkout successful');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
+            "url": "{{baseUrl}}/cart/checkout"
+          }
+        },
+        {
+          "name": "Checkout - empty cart",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
+            "url": "{{baseUrl}}/cart/checkout"
+          }
+        },
+        {
+          "name": "Remove from cart",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
+            "url": "{{baseUrl}}/cart/{{cartItemId}}"
+          }
+        },
+        {
+          "name": "Remove from cart - not found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
+            "url": "{{baseUrl}}/cart/999999"
+          }
+        },
+        {
+          "name": "Remove from cart - unauthenticated",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/cart/{{cartItemId}}"
+          }
+        }
+      ]
+    }
+  ]
+}
