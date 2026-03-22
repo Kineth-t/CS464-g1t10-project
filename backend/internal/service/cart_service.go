@@ -63,7 +63,7 @@ func (s *CartService) RemoveFromCart(userID, itemID int) error {
 	return s.cartRepo.RemoveItem(itemID, cart.ID)
 }
 
-// Checkout finalizes the user's cart and marks it as checked out
+// Checkout finalizes the user's cart, deducts stock, and marks it as checked out
 func (s *CartService) Checkout(userID int) error {
 	// Get the user's active cart
 	cart, err := s.cartRepo.GetCartByUser(userID)
@@ -74,6 +74,35 @@ func (s *CartService) Checkout(userID int) error {
 	// Ensure cart is not empty
 	if len(cart.Items) == 0 {
 		return errors.New("cart is empty")
+	}
+
+	// First pass: validate all items have sufficient stock before deducting anything
+	// This prevents a partial checkout where some phones get deducted but a later one fails
+	for _, item := range cart.Items {
+		phone, err := s.phoneRepo.GetByID(item.PhoneID)
+		if err != nil {
+			return errors.New("a phone in your cart no longer exists")
+		}
+		if phone.Stock < item.Quantity {
+			return errors.New("insufficient stock for one or more items in your cart")
+		}
+	}
+
+	// Second pass: deduct stock for each item now that all items are confirmed available
+	for _, item := range cart.Items {
+		// Re-fetch phone to get the latest stock value
+		phone, err := s.phoneRepo.GetByID(item.PhoneID)
+		if err != nil {
+			return err
+		}
+
+		// Deduct the purchased quantity from stock
+		phone.Stock -= item.Quantity
+
+		// Persist the updated stock
+		if err := s.phoneRepo.Update(phone); err != nil {
+			return err
+		}
 	}
 
 	// Mark the cart as checked out in the repository
