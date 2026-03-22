@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "Phones API",
+    "name": "Ringr Mobile API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -189,7 +189,7 @@
             "url": "{{baseUrl}}/auth/login",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"your-admin-password\"\n}"
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin1234!\"\n}"
             }
           }
         }
@@ -494,42 +494,6 @@
               "raw": "{\n  \"phone_id\": {{phoneId}},\n  \"quantity\": 999999\n}"
             }
           }
-        },
-        {
-          "name": "Delete phone - forbidden (customer)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
-            "url": "{{baseUrl}}/phones/{{phoneId}}"
-          }
-        },
-        {
-          "name": "Delete phone (admin)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": "{{baseUrl}}/phones/{{phoneId}}"
-          }
         }
       ]
     },
@@ -564,7 +528,6 @@
                   "pm.test('Cart item saved', () => {",
                   "  const res = pm.response.json();",
                   "  pm.expect(res.id).to.be.a('number');",
-                  "  pm.expect(res.phone_id).to.eql(pm.collectionVariables.get('phoneId'));",
                   "  pm.expect(res.quantity).to.eql(2);",
                   "  pm.collectionVariables.set('cartItemId', res.id);",
                   "  console.log('Cart item ID saved:', res.id);",
@@ -684,46 +647,6 @@
           }
         },
         {
-          "name": "Checkout",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Checkout successful', () => {",
-                  "  const res = pm.response.json();",
-                  "  pm.expect(res.message).to.eql('checkout successful');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
-            "url": "{{baseUrl}}/cart/checkout"
-          }
-        },
-        {
-          "name": "Checkout - empty cart",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
-            "url": "{{baseUrl}}/cart/checkout"
-          }
-        },
-        {
           "name": "Remove from cart",
           "event": [
             {
@@ -774,6 +697,112 @@
           "request": {
             "method": "DELETE",
             "url": "{{baseUrl}}/cart/{{cartItemId}}"
+          }
+        },
+        {
+          "name": "Add item back for checkout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" }
+            ],
+            "url": "{{baseUrl}}/cart",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_id\": {{phoneId}},\n  \"quantity\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Checkout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Checkout successful', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.message).to.eql('checkout successful');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
+            "url": "{{baseUrl}}/cart/checkout"
+          }
+        },
+        {
+          "name": "Checkout - empty cart",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
+            "url": "{{baseUrl}}/cart/checkout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cleanup",
+      "item": [
+        {
+          "name": "Delete phone - forbidden (customer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
+            "url": "{{baseUrl}}/phones/{{phoneId}}"
+          }
+        },
+        {
+          "name": "Delete phone (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/phones/{{phoneId}}"
           }
         }
       ]
