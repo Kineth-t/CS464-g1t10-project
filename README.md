@@ -66,7 +66,7 @@ CS464-g1t10-project/
 │   ├── internal/
 │   │   ├── handler/
 │   │   │   ├── auth_handler.go      # Register / Login
-│   │   │   ├── phone_handler.go     # Phone CRUD + purchase
+│   │   │   ├── phone_handler.go     # Phone CRUD
 │   │   │   └── cart_handler.go      # Cart get/add/remove/checkout
 │   │   ├── middleware/
 │   │   │   └── auth.go              # JWT RequireAuth / RequireAdmin
@@ -220,14 +220,13 @@ Authorization: Bearer <jwt_token>
 
 ### Phones
 
-| Method | Path           | Auth         | Description              |
-|--------|----------------|--------------|--------------------------|
-| GET    | `/phones`      | None         | List all phones          |
-| GET    | `/phones/{id}` | None         | Get a single phone       |
-| POST   | `/phones`      | Admin only   | Create a phone listing   |
-| PUT    | `/phones/{id}` | Admin only   | Update a phone listing   |
-| DELETE | `/phones/{id}` | Admin only   | Delete a phone listing   |
-| POST   | `/purchase`    | Authenticated| Buy a phone directly     |
+| Method | Path           | Auth       | Description              |
+|--------|----------------|------------|--------------------------|
+| GET    | `/phones`      | None       | List all phones          |
+| GET    | `/phones/{id}` | None       | Get a single phone       |
+| POST   | `/phones`      | Admin only | Create a phone listing   |
+| PUT    | `/phones/{id}` | Admin only | Update a phone listing   |
+| DELETE | `/phones/{id}` | Admin only | Delete a phone listing   |
 
 **GET `/phones`**
 ```json
@@ -242,14 +241,6 @@ Authorization: Bearer <jwt_token>
 // Request body
 { "brand": "Samsung", "model": "Galaxy S24", "price": 699.99, "stock": 5, "description": "..." }
 // Response 201 — created phone object
-```
-
-**POST `/purchase`** (Authenticated)
-```json
-// Request body
-{ "phone_id": 1, "quantity": 2 }
-// Response 200
-{ "message": "purchase successful" }
 ```
 
 ---
@@ -416,8 +407,7 @@ The frontend stores the token in `localStorage` and automatically attaches it to
   - View phone details, stock availability, and description
   - Add phones to cart (re-adding the same phone stacks quantity)
   - Remove individual items from cart
-  - Checkout cart
-  - Direct purchase without using the cart
+  - Checkout cart (deducts stock on completion)
 
 - **Admin**
   - All customer features
