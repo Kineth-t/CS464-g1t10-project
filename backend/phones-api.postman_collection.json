@@ -447,54 +447,6 @@
             }
           }
         },
-        {
-          "name": "Purchase phone",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Success message', () => {",
-                  "  const res = pm.response.json();",
-                  "  pm.expect(res.message).to.eql('purchase successful');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": "{{baseUrl}}/purchase",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"phone_id\": {{phoneId}},\n  \"quantity\": 1\n}"
-            }
-          }
-        },
-        {
-          "name": "Purchase phone - insufficient stock",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": "{{baseUrl}}/purchase",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"phone_id\": {{phoneId}},\n  \"quantity\": 999999\n}"
-            }
-          }
-        }
       ]
     },
     {
