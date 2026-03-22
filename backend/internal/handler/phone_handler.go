@@ -21,12 +21,27 @@ func NewPhoneHandler(s *service.PhoneService) *PhoneHandler {
 }
 
 // ListPhones returns all phones
+//
+// @Summary      List all phones
+// @Tags         phones
+// @Produce      json
+// @Success      200  {array}   model.Phone
+// @Router       /phones [get]
 func (h *PhoneHandler) ListPhones(w http.ResponseWriter, r *http.Request) {
 	// Directly call service and return result as JSON
 	json.NewEncoder(w).Encode(h.service.ListPhones())
 }
 
 // GetPhone returns a single phone by ID
+//
+// @Summary      Get a phone by ID
+// @Tags         phones
+// @Produce      json
+// @Param        id   path      int  true  "Phone ID"
+// @Success      200  {object}  model.Phone
+// @Failure      400  {string}  string "invalid id"
+// @Failure      404  {string}  string "not found"
+// @Router       /phones/{id} [get]
 func (h *PhoneHandler) GetPhone(w http.ResponseWriter, r *http.Request) {
 	// Extract ID from URL (e.g., "/phones/3" → "3")
 	id, err := strconv.Atoi(strings.TrimPrefix(r.URL.Path, "/phones/"))
@@ -48,6 +63,18 @@ func (h *PhoneHandler) GetPhone(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreatePhone adds a new phone
+//
+// @Summary      Create a phone (admin only)
+// @Tags         phones
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body body      model.Phone true "Phone data"
+// @Success      201  {object}  model.Phone
+// @Failure      400  {string}  string "invalid body"
+// @Failure      401  {string}  string "unauthorized"
+// @Failure      403  {string}  string "forbidden"
+// @Router       /phones [post]
 func (h *PhoneHandler) CreatePhone(w http.ResponseWriter, r *http.Request) {
 	var p model.Phone
 
@@ -72,6 +99,20 @@ func (h *PhoneHandler) CreatePhone(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdatePhone updates an existing phone
+//
+// @Summary      Update a phone (admin only)
+// @Tags         phones
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      int         true "Phone ID"
+// @Param        body body      model.Phone true "Updated phone data"
+// @Success      200  {object}  model.Phone
+// @Failure      400  {string}  string "invalid id or body"
+// @Failure      401  {string}  string "unauthorized"
+// @Failure      403  {string}  string "forbidden"
+// @Failure      404  {string}  string "not found"
+// @Router       /phones/{id} [put]
 func (h *PhoneHandler) UpdatePhone(w http.ResponseWriter, r *http.Request) {
 	// Extract ID from URL
 	id, err := strconv.Atoi(strings.TrimPrefix(r.URL.Path, "/phones/"))
@@ -102,6 +143,17 @@ func (h *PhoneHandler) UpdatePhone(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeletePhone removes a phone by ID
+//
+// @Summary      Delete a phone (admin only)
+// @Tags         phones
+// @Security     BearerAuth
+// @Param        id  path      int  true  "Phone ID"
+// @Success      204 {string}  string ""
+// @Failure      400 {string}  string "invalid id"
+// @Failure      401 {string}  string "unauthorized"
+// @Failure      403 {string}  string "forbidden"
+// @Failure      404 {string}  string "not found"
+// @Router       /phones/{id} [delete]
 func (h *PhoneHandler) DeletePhone(w http.ResponseWriter, r *http.Request) {
 	// Extract ID from URL
 	id, err := strconv.Atoi(strings.TrimPrefix(r.URL.Path, "/phones/"))
@@ -121,6 +173,15 @@ func (h *PhoneHandler) DeletePhone(w http.ResponseWriter, r *http.Request) {
 }
 
 // PurchasePhone handles direct purchase (without cart)
+//
+// @Summary      Purchase a phone directly (no cart)
+// @Tags         phones
+// @Accept       json
+// @Produce      json
+// @Param        body body      object{phone_id=int,quantity=int} true "Purchase payload"
+// @Success      200  {object}  object{message=string}
+// @Failure      400  {string}  string "invalid body or insufficient stock"
+// @Router       /purchase [post]
 func (h *PhoneHandler) PurchasePhone(w http.ResponseWriter, r *http.Request) {
 	// Temporary struct for request body
 	var body struct {

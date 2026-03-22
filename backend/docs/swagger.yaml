@@ -1,0 +1,459 @@
+basePath: /
+definitions:
+  model.Address:
+    properties:
+      city:
+        type: string
+      country:
+        type: string
+      state:
+        type: string
+      street:
+        type: string
+      zip_code:
+        type: string
+    type: object
+  model.Cart:
+    properties:
+      id:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/model.CartItem'
+        type: array
+      status:
+        description: '"active" or "checked_out"'
+        type: string
+      user_id:
+        type: integer
+    type: object
+  model.CartItem:
+    properties:
+      cart_id:
+        type: integer
+      id:
+        type: integer
+      phone_id:
+        type: integer
+      price:
+        type: number
+      quantity:
+        type: integer
+    type: object
+  model.Phone:
+    properties:
+      brand:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      model:
+        type: string
+      price:
+        type: number
+      stock:
+        type: integer
+    type: object
+  model.Role:
+    enum:
+    - admin
+    - customer
+    type: string
+    x-enum-varnames:
+    - RoleAdmin
+    - RoleCustomer
+  model.User:
+    properties:
+      address:
+        $ref: '#/definitions/model.Address'
+      id:
+        type: integer
+      phone_number:
+        type: string
+      role:
+        $ref: '#/definitions/model.Role'
+      username:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: Ringr Mobile Team
+  description: REST API for the Ringr Mobile phone store.
+  title: Ringr Mobile API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Login credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            password:
+              type: string
+            username:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              token:
+                type: string
+            type: object
+        "400":
+          description: invalid body
+          schema:
+            type: string
+        "401":
+          description: invalid credentials
+          schema:
+            type: string
+      summary: Login and receive a JWT
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Registration payload
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            address:
+              type: object
+            password:
+              type: string
+            phone_number:
+              type: string
+            username:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.User'
+        "400":
+          description: invalid body / username already taken
+          schema:
+            type: string
+      summary: Register a new user
+      tags:
+      - auth
+  /cart:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Cart'
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+        "404":
+          description: cart not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get the current user's cart
+      tags:
+      - cart
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Item to add
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            phone_id:
+              type: integer
+            quantity:
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.CartItem'
+        "400":
+          description: invalid body or phone not found
+          schema:
+            type: string
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Add a phone to the cart
+      tags:
+      - cart
+  /cart/{id}:
+    delete:
+      parameters:
+      - description: Cart item ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "400":
+          description: invalid item id
+          schema:
+            type: string
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+        "404":
+          description: item not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Remove an item from the cart
+      tags:
+      - cart
+  /cart/checkout:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              message:
+                type: string
+            type: object
+        "400":
+          description: cart empty or insufficient stock
+          schema:
+            type: string
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Checkout the cart
+      tags:
+      - cart
+  /phones:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Phone'
+            type: array
+      summary: List all phones
+      tags:
+      - phones
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Phone data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.Phone'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Phone'
+        "400":
+          description: invalid body
+          schema:
+            type: string
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+        "403":
+          description: forbidden
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create a phone (admin only)
+      tags:
+      - phones
+  /phones/{id}:
+    delete:
+      parameters:
+      - description: Phone ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "400":
+          description: invalid id
+          schema:
+            type: string
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+        "403":
+          description: forbidden
+          schema:
+            type: string
+        "404":
+          description: not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete a phone (admin only)
+      tags:
+      - phones
+    get:
+      parameters:
+      - description: Phone ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Phone'
+        "400":
+          description: invalid id
+          schema:
+            type: string
+        "404":
+          description: not found
+          schema:
+            type: string
+      summary: Get a phone by ID
+      tags:
+      - phones
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Phone ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated phone data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.Phone'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Phone'
+        "400":
+          description: invalid id or body
+          schema:
+            type: string
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+        "403":
+          description: forbidden
+          schema:
+            type: string
+        "404":
+          description: not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update a phone (admin only)
+      tags:
+      - phones
+  /purchase:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Purchase payload
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            phone_id:
+              type: integer
+            quantity:
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              message:
+                type: string
+            type: object
+        "400":
+          description: invalid body or insufficient stock
+          schema:
+            type: string
+      summary: Purchase a phone directly (no cart)
+      tags:
+      - phones
+securityDefinitions:
+  BearerAuth:
+    description: 'Enter your JWT token as: Bearer <token>'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

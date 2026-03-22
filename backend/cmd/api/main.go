@@ -1,3 +1,17 @@
+// @title           Ringr Mobile API
+// @version         1.0
+// @description     REST API for the Ringr Mobile phone store.
+//
+// @contact.name    Ringr Mobile Team
+//
+// @host            localhost:8080
+// @BasePath        /
+//
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Enter your JWT token as: Bearer <token>
+
 package main
 
 import (
@@ -9,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 
+	_ "github.com/Kineth-t/CS464-g1t10-project/docs"
 	"github.com/Kineth-t/CS464-g1t10-project/internal/handler"
 	"github.com/Kineth-t/CS464-g1t10-project/internal/model"
 	pg "github.com/Kineth-t/CS464-g1t10-project/internal/repository/postgres"

@@ -19,6 +19,15 @@ func NewAuthHandler(s *service.AuthService) *AuthHandler {
 }
 
 // Register handles user registration requests
+//
+// @Summary      Register a new user
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body body object{username=string,password=string,phone_number=string,address=object} true "Registration payload"
+// @Success      201  {object}  model.User
+// @Failure      400  {string}  string "invalid body / username already taken"
+// @Router       /auth/register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// Define a temporary struct to store incoming JSON request body
 	var body struct {
@@ -56,6 +65,16 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 // Login handles user login requests
+//
+// @Summary      Login and receive a JWT
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body body object{username=string,password=string} true "Login credentials"
+// @Success      200  {object}  object{token=string}
+// @Failure      400  {string}  string "invalid body"
+// @Failure      401  {string}  string "invalid credentials"
+// @Router       /auth/login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// Temporary struct to store login credentials from request body
 	var body struct {

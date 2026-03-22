@@ -21,6 +21,15 @@ func NewCartHandler(s *service.CartService) *CartHandler {
 }
 
 // GetCart retrieves the current user's cart
+//
+// @Summary      Get the current user's cart
+// @Tags         cart
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  model.Cart
+// @Failure      401  {string}  string "unauthorized"
+// @Failure      404  {string}  string "cart not found"
+// @Router       /cart [get]
 func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from request context (set by authentication middleware)
 	userID := r.Context().Value(middleware.UserIDKey).(int)
@@ -38,6 +47,17 @@ func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) {
 }
 
 // AddToCart adds an item to the user's cart
+//
+// @Summary      Add a phone to the cart
+// @Tags         cart
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body body      object{phone_id=int,quantity=int} true "Item to add"
+// @Success      201  {object}  model.CartItem
+// @Failure      400  {string}  string "invalid body or phone not found"
+// @Failure      401  {string}  string "unauthorized"
+// @Router       /cart [post]
 func (h *CartHandler) AddToCart(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context
 	userID := r.Context().Value(middleware.UserIDKey).(int)
@@ -70,6 +90,16 @@ func (h *CartHandler) AddToCart(w http.ResponseWriter, r *http.Request) {
 }
 
 // RemoveFromCart removes a specific item from the cart
+//
+// @Summary      Remove an item from the cart
+// @Tags         cart
+// @Security     BearerAuth
+// @Param        id  path      int  true  "Cart item ID"
+// @Success      204 {string}  string ""
+// @Failure      400 {string}  string "invalid item id"
+// @Failure      401 {string}  string "unauthorized"
+// @Failure      404 {string}  string "item not found"
+// @Router       /cart/{id} [delete]
 func (h *CartHandler) RemoveFromCart(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context
 	userID := r.Context().Value(middleware.UserIDKey).(int)
@@ -96,6 +126,15 @@ func (h *CartHandler) RemoveFromCart(w http.ResponseWriter, r *http.Request) {
 }
 
 // Checkout processes the user's cart into an order
+//
+// @Summary      Checkout the cart
+// @Tags         cart
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  object{message=string}
+// @Failure      400  {string}  string "cart empty or insufficient stock"
+// @Failure      401  {string}  string "unauthorized"
+// @Router       /cart/checkout [post]
 func (h *CartHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context
 	userID := r.Context().Value(middleware.UserIDKey).(int)

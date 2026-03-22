@@ -3,6 +3,8 @@ package router
 import (
 	"net/http"
 
+	httpSwagger "github.com/swaggo/http-swagger/v2"
+
 	"github.com/Kineth-t/CS464-g1t10-project/internal/handler"
 	"github.com/Kineth-t/CS464-g1t10-project/internal/middleware"
 )
@@ -142,6 +144,9 @@ func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHa
 	// Apply authentication middleware to ALL /cart routes
 	mux.Handle("/cart", middleware.RequireAuth(cartMux))
 	mux.Handle("/cart/", middleware.RequireAuth(cartMux))
+
+	// Swagger UI
+	mux.Handle("/swagger/", httpSwagger.WrapHandler)
 
 	return mux
 }
