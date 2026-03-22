@@ -171,38 +171,3 @@ func (h *PhoneHandler) DeletePhone(w http.ResponseWriter, r *http.Request) {
 	// Return 204 No Content (successful deletion)
 	w.WriteHeader(http.StatusNoContent)
 }
-
-// PurchasePhone handles direct purchase (without cart)
-//
-// @Summary      Purchase a phone directly (no cart)
-// @Tags         phones
-// @Accept       json
-// @Produce      json
-// @Param        body body      object{phone_id=int,quantity=int} true "Purchase payload"
-// @Success      200  {object}  object{message=string}
-// @Failure      400  {string}  string "invalid body or insufficient stock"
-// @Router       /purchase [post]
-func (h *PhoneHandler) PurchasePhone(w http.ResponseWriter, r *http.Request) {
-	// Temporary struct for request body
-	var body struct {
-		PhoneID  int `json:"phone_id"`  // ID of phone to purchase
-		Quantity int `json:"quantity"`  // Quantity to buy
-	}
-
-	// Decode JSON request
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, "invalid body", http.StatusBadRequest)
-		return
-	}
-
-	// Call service to process purchase
-	if err := h.service.PurchasePhone(body.PhoneID, body.Quantity); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Return success message
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "purchase successful",
-	})
-}

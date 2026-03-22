@@ -55,19 +55,6 @@ func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHa
 		}
 	})
 
-	// Purchase endpoint (no auth required here)
-	mux.HandleFunc("/purchase", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		// Direct purchase (without cart)
-		ph.PurchasePhone(w, r)
-	})
-
 	// ========================
 	// Auth routes (PUBLIC)
 	// ========================

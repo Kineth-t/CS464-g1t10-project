@@ -50,23 +50,3 @@ func (s *PhoneService) CreatePhone(p model.Phone) (model.Phone, error) {
 	// Delegate creation to repository
 	return s.repo.Create(p), nil
 }
-
-// PurchasePhone reduces stock when a phone is purchased
-func (s *PhoneService) PurchasePhone(id, quantity int) error {
-	// Check if phone exists
-	phone, err := s.repo.GetByID(id)
-	if err != nil {
-		return err
-	}
-
-	// Check if stock is sufficient
-	if phone.Stock < quantity {
-		return errors.New("insufficient stock")
-	}
-
-	// Reduce stock
-	phone.Stock -= quantity
-
-	// Update repository
-	return s.repo.Update(phone)
-}
