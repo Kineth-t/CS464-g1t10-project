@@ -13,9 +13,10 @@ A full-stack mobile phone e-commerce application built for CS464. Customers can 
 - [API Reference](#api-reference)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
-  - [Database Setup](#database-setup)
-  - [Backend](#backend)
-  - [Frontend](#frontend)
+  - [1. Configure environment variables](#1-configure-environment-variables)
+  - [2. Set up the database](#2-set-up-the-database)
+  - [3. Install dependencies](#3-install-dependencies)
+  - [4. Start both servers](#4-start-both-servers)
 - [Environment Variables](#environment-variables)
 - [Authentication](#authentication)
 - [Features](#features)
@@ -174,6 +175,8 @@ Run `backend/migration/001_init.sql` against your PostgreSQL database to create 
 
 Base URL: `http://localhost:8080`
 
+**Interactive docs:** [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html) — available whenever the backend is running. Click **Authorize** and paste `Bearer <your_jwt>` to test protected endpoints directly from the browser.
+
 All protected routes require the header:
 ```
 Authorization: Bearer <jwt_token>
@@ -288,74 +291,94 @@ All cart routes require authentication.
 
 ### Prerequisites
 
-- **Go** 1.21 or later
-- **Node.js** 18 or later + npm
-- **PostgreSQL** 14 or later
+- **Go** 1.21 or later — [go.dev/dl](https://go.dev/dl)
+- **Node.js** 18 or later + npm — [nodejs.org](https://nodejs.org)
+- **PostgreSQL** 14 or later — running and accessible
+- **make** — pre-installed on Mac/Linux; on Windows use [Git Bash](https://git-scm.com) or [WSL](https://learn.microsoft.com/en-us/windows/wsl/)
 
-### Database Setup
+### 1. Configure environment variables
 
-1. Create a database:
-   ```bash
-   createdb ringr
-   ```
+```bash
+cp .env.example .env
+```
 
-2. Run the migration:
-   ```bash
-   psql -d ringr -f backend/migration/001_init.sql
-   ```
+Open `.env` and set your values. The defaults in `.env.example` work if your local Postgres matches those credentials. See [Environment Variables](#environment-variables) for details.
 
-### Backend
+### 2. Set up the database
 
-1. Set environment variables (see [Environment Variables](#environment-variables) below).
+Create a database and run the migration:
 
-2. Run the server:
-   ```bash
-   cd backend
-   go run ./cmd/api
-   ```
+```bash
+createdb phonestore
+psql -d phonestore -f backend/migration/001_init.sql
+```
 
-   The server starts on `http://localhost:8080`. On first startup it automatically seeds an `admin` user with the password from `ADMIN_PASSWORD`.
+> If your Postgres is in Docker or has a different user/host, adjust the `createdb`/`psql` commands accordingly and update `DATABASE_URL` in `.env`.
 
-### Frontend
+### 3. Install dependencies
 
-1. Install dependencies:
-   ```bash
-   cd frontend
-   npm install
-   ```
+```bash
+make install
+```
 
-2. Start the dev server:
-   ```bash
-   npm run dev
-   ```
+### 4. Start both servers
 
-   Vite starts on `http://localhost:5173` and proxies all `/api/*` requests to the Go backend at `http://127.0.0.1:8080`.
+```bash
+make dev
+```
 
-3. Build for production:
-   ```bash
-   npm run build
-   # Output → frontend/dist/
-   ```
+This starts the Go backend and Vite frontend in parallel:
+
+| Service  | URL                                              |
+|----------|--------------------------------------------------|
+| Frontend | http://localhost:5173                            |
+| Backend  | http://localhost:8080                            |
+| Swagger  | http://localhost:8080/swagger/index.html         |
+
+On first startup the backend automatically seeds an `admin` account using the `ADMIN_PASSWORD` from your `.env`.
+
+### Running servers individually
+
+```bash
+make backend    # Go API only
+make frontend   # Vite only
+```
+
+### Production build
+
+```bash
+cd frontend && npm run build
+# Output → frontend/dist/
+```
+
+### Without make (Windows)
+
+If `make` is unavailable, run each command manually in separate terminals:
+
+```bash
+# Terminal 1 – backend
+cd backend
+set DATABASE_URL=postgres://root:mysecretpassword@localhost:5432/phonestore
+set JWT_SECRET=phonestore-jwt-secret-cs464
+set ADMIN_PASSWORD=Admin1234!
+go run ./cmd/api
+
+# Terminal 2 – frontend
+cd frontend
+npm run dev
+```
 
 ---
 
 ## Environment Variables
 
-| Variable         | Required | Default                      | Description                                   |
-|------------------|----------|------------------------------|-----------------------------------------------|
-| `DATABASE_URL`   | Yes      | —                            | PostgreSQL DSN, e.g. `postgres://user:pass@localhost:5432/ringr` |
-| `JWT_SECRET`     | No       | `change-me-in-production`    | Secret used to sign JWT tokens                |
-| `ADMIN_PASSWORD` | No       | —                            | Password for the seeded `admin` account       |
+Copy `.env.example` to `.env` and fill in your values. The `make dev` / `make backend` targets load `.env` automatically.
 
-Set them in your shell before running the backend:
-
-```bash
-export DATABASE_URL="postgres://postgres:password@localhost:5432/ringr"
-export JWT_SECRET="your-strong-secret"
-export ADMIN_PASSWORD="YourAdminPassword!"
-
-cd backend && go run ./cmd/api
-```
+| Variable         | Required | Description                                                        |
+|------------------|----------|--------------------------------------------------------------------|
+| `DATABASE_URL`   | Yes      | PostgreSQL DSN, e.g. `postgres://user:pass@localhost:5432/phonestore` |
+| `JWT_SECRET`     | Yes      | Secret used to sign JWT tokens — change this in production         |
+| `ADMIN_PASSWORD` | Yes      | Password for the seeded `admin` account                            |
 
 ---
 
