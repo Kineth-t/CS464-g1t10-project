@@ -63,7 +63,11 @@ func main() {
 
 	r := router.Setup(ph, ah, ch)
 
-	log.Println("Server running on :8080")
+	log.Println("----------------------------------------")
+	log.Println("  Ringr Mobile API")
+	log.Println("  http://localhost:8080")
+	log.Println("  Swagger UI: http://localhost:8080/swagger/index.html")
+	log.Println("----------------------------------------")
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
 
