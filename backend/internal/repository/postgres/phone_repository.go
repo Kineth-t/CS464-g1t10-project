@@ -24,7 +24,7 @@ func (r *PhoneRepository) GetAll() []model.Phone {
 
 	// Execute SELECT query
 	rows, err := r.db.Query(context.Background(),
-		`SELECT id, brand, model, price, stock, description FROM phones`)
+		`SELECT id, brand, model, price, stock, description, image_url FROM phones`)
 	if err != nil {
 		return nil // returns nil if query fails
 	}
@@ -37,7 +37,7 @@ func (r *PhoneRepository) GetAll() []model.Phone {
 		var p model.Phone
 
 		// Map DB columns -> struct fields
-		rows.Scan(&p.ID, &p.Brand, &p.Model, &p.Price, &p.Stock, &p.Description)
+		rows.Scan(&p.ID, &p.Brand, &p.Model, &p.Price, &p.Stock, &p.Description, &p.ImageURL)
 
 		phones = append(phones, p)
 	}
@@ -51,11 +51,11 @@ func (r *PhoneRepository) GetByID(id int) (model.Phone, error) {
 
 	// Query a single row
 	row := r.db.QueryRow(context.Background(),
-		`SELECT id, brand, model, price, stock, description 
+		`SELECT id, brand, model, price, stock, description, image_url
 		 FROM phones WHERE id = $1`, id)
 
 	// Scan result into struct
-	if err := row.Scan(&p.ID, &p.Brand, &p.Model, &p.Price, &p.Stock, &p.Description); err != nil {
+	if err := row.Scan(&p.ID, &p.Brand, &p.Model, &p.Price, &p.Stock, &p.Description, &p.ImageURL); err != nil {
 		return model.Phone{}, errors.New("phone not found")
 	}
 
@@ -67,10 +67,10 @@ func (r *PhoneRepository) Create(p model.Phone) model.Phone {
 
 	// Insert and return generated ID
 	r.db.QueryRow(context.Background(),
-		`INSERT INTO phones (brand, model, price, stock, description)
-		 VALUES ($1, $2, $3, $4, $5) 
+		`INSERT INTO phones (brand, model, price, stock, description, image_url)
+		 VALUES ($1, $2, $3, $4, $5, $6) 
 		 RETURNING id`,
-		p.Brand, p.Model, p.Price, p.Stock, p.Description,
+		p.Brand, p.Model, p.Price, p.Stock, p.Description, p.ImageURL,
 	).Scan(&p.ID)
 
 	return p
@@ -82,9 +82,9 @@ func (r *PhoneRepository) Update(p model.Phone) error {
 	// Execute UPDATE query
 	result, err := r.db.Exec(context.Background(),
 		`UPDATE phones 
-		 SET brand=$1, model=$2, price=$3, stock=$4, description=$5 
-		 WHERE id=$6`,
-		p.Brand, p.Model, p.Price, p.Stock, p.Description, p.ID,
+		 SET brand=$1, model=$2, price=$3, stock=$4, description=$5, image_url=$6 
+		 WHERE id=$7`,
+		p.Brand, p.Model, p.Price, p.Stock, p.Description, p.ImageURL, p.ID,
 	)
 	if err != nil {
 		return err

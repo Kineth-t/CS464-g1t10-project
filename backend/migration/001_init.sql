@@ -17,7 +17,8 @@ CREATE TABLE phones (
     model       VARCHAR(100) NOT NULL,
     price       NUMERIC(10,2) NOT NULL,
     stock       INT NOT NULL DEFAULT 0,
-    description TEXT
+    description TEXT,
+    image_url   TEXT
 );
 
 CREATE TABLE carts (
