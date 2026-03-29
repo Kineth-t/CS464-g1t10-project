@@ -23,9 +23,6 @@ WORKDIR /app
 # Copy the binary from the build stage
 COPY --from=builder /app/server .
 
-# Copy migrations so they can be run inside the container
-COPY --from=builder /app/migrations ./migrations
-
 # Expose the API port
 EXPOSE 8080
 
