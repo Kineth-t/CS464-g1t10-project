@@ -218,6 +218,11 @@
                   "  pm.expect(res.model).to.eql('iPhone 15');",
                   "  pm.expect(res.price).to.eql(1299);",
                   "  pm.expect(res.stock).to.eql(50);",
+                  "});",
+                  "pm.test('Has image_url', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.image_url).to.be.a('string');",
+                  "  pm.expect(res.image_url).to.not.be.empty;",
                   "});"
                 ]
               }
@@ -232,7 +237,7 @@
             "url": "{{baseUrl}}/phones",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": 1299.00,\n  \"stock\": 50,\n  \"description\": \"Latest iPhone model\"\n}"
+              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": 1299.00,\n  \"stock\": 50,\n  \"description\": \"Latest iPhone model\",\n  \"image_url\": \"https://example.com/images/iphone15.jpg\"\n}"
             }
           }
         },
@@ -254,7 +259,7 @@
             "url": "{{baseUrl}}/phones",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": 1299.00,\n  \"stock\": 50,\n  \"description\": \"No token\"\n}"
+              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": 1299.00,\n  \"stock\": 50,\n  \"description\": \"No token\",\n  \"image_url\": \"https://example.com/images/iphone15.jpg\"\n}"
             }
           }
         },
@@ -279,7 +284,7 @@
             "url": "{{baseUrl}}/phones",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"brand\": \"Samsung\",\n  \"model\": \"Galaxy S24\",\n  \"price\": 999.00,\n  \"stock\": 30,\n  \"description\": \"Should be forbidden\"\n}"
+              "raw": "{\n  \"brand\": \"Samsung\",\n  \"model\": \"Galaxy S24\",\n  \"price\": 999.00,\n  \"stock\": 30,\n  \"description\": \"Should be forbidden\",\n  \"image_url\": \"https://example.com/images/galaxys24.jpg\"\n}"
             }
           }
         },
@@ -304,7 +309,7 @@
             "url": "{{baseUrl}}/phones",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": -100,\n  \"stock\": 50,\n  \"description\": \"Bad price\"\n}"
+              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": -100,\n  \"stock\": 50,\n  \"description\": \"Bad price\",\n  \"image_url\": \"https://example.com/images/iphone15.jpg\"\n}"
             }
           }
         },
@@ -329,7 +334,7 @@
             "url": "{{baseUrl}}/phones",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": 999.00,\n  \"stock\": -5,\n  \"description\": \"Bad stock\"\n}"
+              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": 999.00,\n  \"stock\": -5,\n  \"description\": \"Bad stock\",\n  \"image_url\": \"https://example.com/images/iphone15.jpg\"\n}"
             }
           }
         },
@@ -345,6 +350,10 @@
                   "  const res = pm.response.json();",
                   "  pm.expect(res).to.be.an('array');",
                   "  pm.expect(res.length).to.be.above(0);",
+                  "});",
+                  "pm.test('Each phone has image_url', () => {",
+                  "  const res = pm.response.json();",
+                  "  res.forEach(phone => pm.expect(phone).to.have.property('image_url'));",
                   "});"
                 ]
               }
@@ -366,6 +375,10 @@
                   "pm.test('Correct phone returned', () => {",
                   "  const res = pm.response.json();",
                   "  pm.expect(res.id).to.eql(pm.collectionVariables.get('phoneId'));",
+                  "});",
+                  "pm.test('Has image_url', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res).to.have.property('image_url');",
                   "});"
                 ]
               }
@@ -404,6 +417,10 @@
                   "pm.test('Price updated', () => {",
                   "  const res = pm.response.json();",
                   "  pm.expect(res.price).to.eql(1199);",
+                  "});",
+                  "pm.test('Image URL updated', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.image_url).to.eql('https://example.com/images/iphone15-updated.jpg');",
                   "});"
                 ]
               }
@@ -418,7 +435,7 @@
             "url": "{{baseUrl}}/phones/{{phoneId}}",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": 1199.00,\n  \"stock\": 45,\n  \"description\": \"Price dropped\"\n}"
+              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": 1199.00,\n  \"stock\": 45,\n  \"description\": \"Price dropped\",\n  \"image_url\": \"https://example.com/images/iphone15-updated.jpg\"\n}"
             }
           }
         },
@@ -443,10 +460,10 @@
             "url": "{{baseUrl}}/phones/{{phoneId}}",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": 1.00,\n  \"stock\": 45,\n  \"description\": \"Should be forbidden\"\n}"
+              "raw": "{\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15\",\n  \"price\": 1.00,\n  \"stock\": 45,\n  \"description\": \"Should be forbidden\",\n  \"image_url\": \"https://example.com/images/iphone15.jpg\"\n}"
             }
           }
-        },
+        }
       ]
     },
     {
