@@ -14,9 +14,8 @@ A full-stack mobile phone e-commerce application built for CS464. Customers can 
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [1. Configure environment variables](#1-configure-environment-variables)
-  - [2. Set up the database](#2-set-up-the-database)
-  - [3. Install dependencies](#3-install-dependencies)
-  - [4. Start both servers](#4-start-both-servers)
+  - [2. Start with Docker](#2-start-with-docker)
+  - [3. Running without Docker](#3-running-without-docker)
 - [Environment Variables](#environment-variables)
 - [Authentication](#authentication)
 - [Features](#features)
@@ -25,14 +24,15 @@ A full-stack mobile phone e-commerce application built for CS464. Customers can 
 
 ## Tech Stack
 
-| Layer      | Technology                                      |
-|------------|-------------------------------------------------|
-| Backend    | Go 1.25 · `net/http` · `golang-jwt/jwt v5`     |
-| Database   | PostgreSQL · `pgx/v5` connection pool           |
-| Frontend   | React 19 · Vite 8 · React Router 7             |
-| Styling    | Tailwind CSS v4 · shadcn/ui (Base UI variant)   |
-| Icons      | Lucide React                                    |
-| Toasts     | Sonner                                          |
+| Layer | Technology |
+|---|---|
+| Backend | Go 1.25 · `net/http` · `golang-jwt/jwt v5` |
+| Database | PostgreSQL 16 · `pgx/v5` connection pool |
+| Frontend | React 19 · Vite 8 · React Router 7 |
+| Styling | Tailwind CSS v4 · shadcn/ui (Base UI variant) |
+| Icons | Lucide React |
+| Toasts | Sonner |
+| Containerisation | Docker · Docker Compose |
 
 ---
 
@@ -75,9 +75,9 @@ CS464-g1t10-project/
 │   │   │   ├── phone.go
 │   │   │   └── cart.go
 │   │   ├── repository/
-│   │   │   ├── user_repo.go         # Repository interfaces
-│   │   │   ├── phone_repo.go
-│   │   │   ├── cart_repo.go
+│   │   │   ├── user_repository.go   # Repository interfaces + in-memory implementations
+│   │   │   ├── phone_repository.go
+│   │   │   ├── cart_repository.go
 │   │   │   └── postgres/            # PostgreSQL implementations
 │   │   │       ├── user_repository.go
 │   │   │       ├── phone_repository.go
@@ -88,8 +88,11 @@ CS464-g1t10-project/
 │   │       ├── auth_service.go
 │   │       ├── phone_service.go
 │   │       └── cart_service.go
-│   ├── migration/
-│   │   └── 001_init.sql             # Schema (run once)
+│   ├── migrations/
+│   │   └── 001_init.sql             # Schema (applied automatically on first Docker startup)
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   ├── .dockerignore
 │   ├── go.mod
 │   └── phones-api.postman_collection.json
 │
@@ -121,61 +124,57 @@ CS464-g1t10-project/
 
 ## Database Schema
 
-Run `backend/migration/001_init.sql` against your PostgreSQL database to create all tables.
+The schema is applied automatically on first Docker startup via `backend/migrations/001_init.sql`.
 
 ### `users`
 
-| Column         | Type           | Notes                          |
-|----------------|----------------|--------------------------------|
-| `id`           | SERIAL PK      |                                |
-| `username`     | VARCHAR(100)   | Unique, required               |
-| `password`     | TEXT           | bcrypt-hashed                  |
-| `phone_number` | VARCHAR(20)    |                                |
-| `street`       | TEXT           | Address fields                 |
-| `city`         | VARCHAR(100)   |                                |
-| `state`        | VARCHAR(100)   |                                |
-| `country`      | VARCHAR(100)   |                                |
-| `zip_code`     | VARCHAR(20)    |                                |
-| `role`         | VARCHAR(20)    | `'customer'` or `'admin'`      |
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `username` | VARCHAR(100) | Unique, required |
+| `password` | TEXT | bcrypt-hashed |
+| `phone_number` | VARCHAR(20) | |
+| `street` | TEXT | Address fields |
+| `city` | VARCHAR(100) | |
+| `state` | VARCHAR(100) | |
+| `country` | VARCHAR(100) | |
+| `zip_code` | VARCHAR(20) | |
+| `role` | VARCHAR(20) | `'customer'` or `'admin'` |
 
 ### `phones`
 
-| Column        | Type           | Notes            |
-|---------------|----------------|------------------|
-| `id`          | SERIAL PK      |                  |
-| `brand`       | VARCHAR(100)   | Required         |
-| `model`       | VARCHAR(100)   | Required         |
-| `price`       | NUMERIC(10,2)  | Required         |
-| `stock`       | INT            | Default 0        |
-| `description` | TEXT           |                  |
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `brand` | VARCHAR(100) | Required |
+| `model` | VARCHAR(100) | Required |
+| `price` | NUMERIC(10,2) | Required |
+| `stock` | INT | Default 0 |
+| `description` | TEXT | |
 
 ### `carts`
 
-| Column    | Type         | Notes                            |
-|-----------|--------------|----------------------------------|
-| `id`      | SERIAL PK    |                                  |
-| `user_id` | INT FK       | References `users(id)`           |
-| `status`  | VARCHAR(20)  | `'active'` or `'checked_out'`    |
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `user_id` | INT FK | References `users(id)` |
+| `status` | VARCHAR(20) | `'active'` or `'checked_out'` |
 
 ### `cart_items`
 
-| Column     | Type          | Notes                                      |
-|------------|---------------|--------------------------------------------|
-| `id`       | SERIAL PK     |                                            |
-| `cart_id`  | INT FK        | References `carts(id)` — cascades on delete|
-| `phone_id` | INT FK        | References `phones(id)`                    |
-| `quantity` | INT           | Required                                   |
-| `price`    | NUMERIC(10,2) | Price at time of add                       |
-
-`UNIQUE(cart_id, phone_id)` — adding the same phone again increments quantity instead of inserting a duplicate row.
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `cart_id` | INT FK | References `carts(id)` — cascades on delete |
+| `phone_id` | INT FK | References `phones(id)` |
+| `quantity` | INT | Required |
+| `price` | NUMERIC(10,2) | Price at time of add |
 
 ---
 
 ## API Reference
 
 Base URL: `http://localhost:8080`
-
-**Interactive docs:** [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html) — available whenever the backend is running. Click **Authorize** and paste `Bearer <your_jwt>` to test protected endpoints directly from the browser.
 
 All protected routes require the header:
 ```
@@ -184,10 +183,10 @@ Authorization: Bearer <jwt_token>
 
 ### Auth
 
-| Method | Path             | Auth     | Description                  |
-|--------|------------------|----------|------------------------------|
-| POST   | `/auth/register` | None     | Create a new customer account|
-| POST   | `/auth/login`    | None     | Login and receive a JWT token|
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/auth/register` | None | Create a new customer account |
+| POST | `/auth/login` | None | Login and receive a JWT token |
 
 **POST `/auth/register`**
 ```json
@@ -220,13 +219,13 @@ Authorization: Bearer <jwt_token>
 
 ### Phones
 
-| Method | Path           | Auth       | Description              |
-|--------|----------------|------------|--------------------------|
-| GET    | `/phones`      | None       | List all phones          |
-| GET    | `/phones/{id}` | None       | Get a single phone       |
-| POST   | `/phones`      | Admin only | Create a phone listing   |
-| PUT    | `/phones/{id}` | Admin only | Update a phone listing   |
-| DELETE | `/phones/{id}` | Admin only | Delete a phone listing   |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/phones` | None | List all phones |
+| GET | `/phones/{id}` | None | Get a single phone |
+| POST | `/phones` | Admin only | Create a phone listing |
+| PUT | `/phones/{id}` | Admin only | Update a phone listing |
+| DELETE | `/phones/{id}` | Admin only | Delete a phone listing |
 
 **GET `/phones`**
 ```json
@@ -249,12 +248,12 @@ Authorization: Bearer <jwt_token>
 
 All cart routes require authentication.
 
-| Method | Path                | Auth          | Description            |
-|--------|---------------------|---------------|------------------------|
-| GET    | `/cart`             | Authenticated | Get current user's cart|
-| POST   | `/cart`             | Authenticated | Add item to cart       |
-| DELETE | `/cart/{itemId}`    | Authenticated | Remove item from cart  |
-| POST   | `/cart/checkout`    | Authenticated | Checkout the cart      |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/cart` | Authenticated | Get current user's cart |
+| POST | `/cart` | Authenticated | Add item to cart |
+| DELETE | `/cart/{itemId}` | Authenticated | Remove item from cart |
+| POST | `/cart/checkout` | Authenticated | Checkout the cart — deducts stock |
 
 **GET `/cart`**
 ```json
@@ -282,94 +281,101 @@ All cart routes require authentication.
 
 ### Prerequisites
 
-- **Go** 1.21 or later — [go.dev/dl](https://go.dev/dl)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — the only requirement to run the backend and database
+
+For frontend development only:
 - **Node.js** 18 or later + npm — [nodejs.org](https://nodejs.org)
-- **PostgreSQL** 14 or later — running and accessible
-- **make** — pre-installed on Mac/Linux; on Windows use [Git Bash](https://git-scm.com) or [WSL](https://learn.microsoft.com/en-us/windows/wsl/)
+
+---
 
 ### 1. Configure environment variables
 
-```bash
-cp .env.example .env
-```
+The default values in `backend/docker-compose.yml` work out of the box for local development. To change them edit the `environment` section under the `api` service:
 
-Open `.env` and set your values. The defaults in `.env.example` work if your local Postgres matches those credentials. See [Environment Variables](#environment-variables) for details.
+| Variable | Default | Description |
+|---|---|---|
+| `DATABASE_URL` | `postgres://postgres:postgres@db:5432/phones_db` | PostgreSQL connection string |
+| `JWT_SECRET` | `change-me-in-production` | Secret key for signing JWT tokens |
+| `ADMIN_PASSWORD` | `adminpassword` | Password for the seeded admin account |
 
-### 2. Set up the database
+---
 
-Create a database and run the migration:
-
-```bash
-createdb phonestore
-psql -d phonestore -f backend/migration/001_init.sql
-```
-
-> If your Postgres is in Docker or has a different user/host, adjust the `createdb`/`psql` commands accordingly and update `DATABASE_URL` in `.env`.
-
-### 3. Install dependencies
+### 2. Start with Docker
 
 ```bash
-make install
-```
-
-### 4. Start both servers
-
-```bash
-make dev
-```
-
-This starts the Go backend and Vite frontend in parallel:
-
-| Service  | URL                                              |
-|----------|--------------------------------------------------|
-| Frontend | http://localhost:5173                            |
-| Backend  | http://localhost:8080                            |
-| Swagger  | http://localhost:8080/swagger/index.html         |
-
-On first startup the backend automatically seeds an `admin` account using the `ADMIN_PASSWORD` from your `.env`.
-
-### Running servers individually
-
-```bash
-make backend    # Go API only
-make frontend   # Vite only
-```
-
-### Production build
-
-```bash
-cd frontend && npm run build
-# Output → frontend/dist/
-```
-
-### Without make (Windows)
-
-If `make` is unavailable, run each command manually in separate terminals:
-
-```bash
-# Terminal 1 – backend
 cd backend
-set DATABASE_URL=postgres://root:mysecretpassword@localhost:5432/phonestore
-set JWT_SECRET=phonestore-jwt-secret-cs464
-set ADMIN_PASSWORD=Admin1234!
-go run ./cmd/api
+docker compose up --build -d
+```
 
-# Terminal 2 – frontend
+This will:
+1. Build the Go binary inside a Docker build stage
+2. Start a PostgreSQL 16 container and automatically run `migrations/001_init.sql`
+3. Start the API container once the database is healthy
+4. Seed an `admin` user using the `ADMIN_PASSWORD` environment variable
+
+Verify it is running:
+```bash
+docker compose logs -f api
+```
+
+You should see:
+```
+Connected to database
+Admin user seeded
+Server running on :8080
+```
+
+| Service | URL |
+|---|---|
+| Backend API | http://localhost:8080 |
+| PostgreSQL | localhost:5432 |
+
+**Stopping the containers:**
+```bash
+# Stop containers
+docker compose down
+
+# Stop and wipe the database for a fresh start
+docker compose down -v
+```
+
+**Starting the frontend:**
+```bash
 cd frontend
+npm install
 npm run dev
+```
+
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| Backend | http://localhost:8080 |
+
+---
+
+### 3. Running without Docker
+
+Requires a local PostgreSQL instance.
+
+```bash
+cd backend
+export DATABASE_URL="postgres://postgres:password@localhost:5432/phones_db"
+export JWT_SECRET="your-secret-key"
+export ADMIN_PASSWORD="adminpassword"
+
+psql -U postgres -d phones_db -f migrations/001_init.sql
+go run ./cmd/api
 ```
 
 ---
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and fill in your values. The `make dev` / `make backend` targets load `.env` automatically.
-
-| Variable         | Required | Description                                                        |
-|------------------|----------|--------------------------------------------------------------------|
-| `DATABASE_URL`   | Yes      | PostgreSQL DSN, e.g. `postgres://user:pass@localhost:5432/phonestore` |
-| `JWT_SECRET`     | Yes      | Secret used to sign JWT tokens — change this in production         |
-| `ADMIN_PASSWORD` | Yes      | Password for the seeded `admin` account                            |
+| Variable | Required | Description |
+|---|---|---|
+| `DATABASE_URL` | Yes | PostgreSQL DSN, e.g. `postgres://user:pass@localhost:5432/phones_db` |
+| `JWT_SECRET` | Yes | Secret used to sign JWT tokens — change this in production |
+| `ADMIN_PASSWORD` | Yes | Password for the seeded `admin` account |
 
 ---
 
@@ -390,7 +396,6 @@ Ringr Mobile uses **JWT (JSON Web Tokens)** with HMAC-SHA256 signing.
 ```
 
 **Using the token:**
-Include it in the `Authorization` header of any protected request:
 ```
 Authorization: Bearer eyJhbGci...
 ```
@@ -405,9 +410,9 @@ The frontend stores the token in `localStorage` and automatically attaches it to
   - Register and log in
   - Browse the phone catalog with live search by brand or model
   - View phone details, stock availability, and description
-  - Add phones to cart (re-adding the same phone stacks quantity)
+  - Add phones to cart
   - Remove individual items from cart
-  - Checkout cart (deducts stock on completion)
+  - Checkout cart — validates and deducts stock atomically on completion
 
 - **Admin**
   - All customer features
@@ -419,6 +424,7 @@ The frontend stores the token in `localStorage` and automatically attaches it to
   - Role-based access control enforced on both backend middleware and frontend route guards
   - Password hashing with bcrypt
   - Responsive UI with dark-mode CSS variables
+  - Fully containerised backend and database with Docker
 
 ---
 
@@ -430,4 +436,4 @@ A ready-to-import Postman collection is provided at:
 backend/phones-api.postman_collection.json
 ```
 
-Import it into Postman to explore and test all API endpoints interactively. Set the `base_url` collection variable to `http://localhost:8080` and the `token` variable to your JWT after logging in.
+Import it into Postman, set the `baseUrl` collection variable to `http://localhost:8080`, then run the requests in order — the Login requests automatically save tokens to collection variables so subsequent requests are authenticated automatically.
