@@ -12,7 +12,7 @@ type CartRepo interface {
 	GetCartByUser(userID int) (model.Cart, error)
 	AddItem(item model.CartItem) model.CartItem
 	RemoveItem(itemID, cartID int) error
-	CheckoutCart(cartID int) error
+	CheckoutCart(cartID int, items []model.CartItem) error // items passed in for atomic deduction
 }
 
 type CartRepository struct {

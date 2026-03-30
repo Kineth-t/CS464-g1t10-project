@@ -58,7 +58,7 @@ func (r *CartRepository) GetCartByUser(userID int) (model.Cart, error) {
 		 WHERE user_id=$1 AND status='active' 
 		 LIMIT 1`, userID)
 
-	// If not found → return error
+	// If not found -> return error
 	if err := row.Scan(&cart.ID, &cart.UserID, &cart.Status); err != nil {
 		return model.Cart{}, errors.New("no active cart")
 	}
@@ -106,16 +106,54 @@ func (r *CartRepository) RemoveItem(itemID, cartID int) error {
 	return nil
 }
 
-// CheckoutCart marks a cart as checked out
-func (r *CartRepository) CheckoutCart(cartID int) error {
+// CheckoutCart marks the cart as checked out and deducts stock atomically inside a transaction.
+// SELECT FOR UPDATE locks the phone rows so concurrent checkouts cannot both succeed
+// against the same stock —> one will wait, re-read the decremented value, and fail if stock is gone.
+func (r *CartRepository) CheckoutCart(cartID int, items []model.CartItem) error {
+	// Begin transaction
+	tx, err := r.db.Begin(context.Background())
+	if err != nil {
+		return err
+	}
+	// Always roll back if we return an error before committing
+	defer tx.Rollback(context.Background())
 
-	// Update cart status
-	_, err := r.db.Exec(context.Background(),
-		`UPDATE carts 
-		 SET status='checked_out' 
-		 WHERE id=$1`, cartID)
+	// Lock all affected phone rows for the duration of this transaction.
+	// Any concurrent transaction trying to lock the same rows will block here
+	// until this transaction commits or rolls back.
+	for _, item := range items {
+		var stock int
+		err := tx.QueryRow(context.Background(),
+			`SELECT stock FROM phones WHERE id=$1 FOR UPDATE`, item.PhoneID,
+		).Scan(&stock)
+		if err != nil {
+			return errors.New("A phone in your cart no longer exists")
+		}
+		if stock < item.Quantity {
+			return errors.New("iInsufficient stock for one or more items in your cart")
+		}
+	}
 
-	return err
+	// Deduct stock now that all rows are locked and validated
+	for _, item := range items {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE phones SET stock = stock - $1 WHERE id=$2`,
+			item.Quantity, item.PhoneID,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Mark cart as checked out
+	_, err = tx.Exec(context.Background(),
+		`UPDATE carts SET status='checked_out' WHERE id=$1`, cartID)
+	if err != nil {
+		return err
+	}
+
+	// Commit and releases all locks
+	return tx.Commit(context.Background())
 }
 
 // getItems retrieves all items belonging to a cart

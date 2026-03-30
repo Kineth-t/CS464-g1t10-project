@@ -23,30 +23,25 @@ func (s *CartService) GetCart(userID int) (model.Cart, error) {
 	return s.cartRepo.GetCartByUser(userID) // Returns error if no active cart exists
 }
 
-// AddToCart adds a phone item to the user's active cart
+// AddToCart adds a phone item to the user's active cart.
+// Uses a locked stock check so two users cannot both add the last item simultaneously.
 func (s *CartService) AddToCart(userID, phoneID, quantity int) (model.CartItem, error) {
-	// Check if the phone exists
-	phone, err := s.phoneRepo.GetByID(phoneID)
+	// Lock the phone row and validate stock atomically — prevents race conditions
+	price, err := s.phoneRepo.CheckStockAndReserve(phoneID, quantity)
 	if err != nil {
-		return model.CartItem{}, errors.New("phone not found")
-	}
-
-	// Ensure requested quantity is available
-	if phone.Stock < quantity {
-		return model.CartItem{}, errors.New("insufficient stock")
+		return model.CartItem{}, err // "phone not found" or "insufficient stock"
 	}
 
 	// Retrieve or create an active cart for the user
 	cart := s.cartRepo.GetOrCreateActiveCart(userID)
 
-	// Create a new cart item
+	// Create a new cart item — price is captured at time of add
 	item := model.CartItem{
 		CartID:   cart.ID,
 		PhoneID:  phoneID,
 		Quantity: quantity,
-		Price:    phone.Price,
+		Price:    price,
 	}
-
 	// Add item to cart repository
 	return s.cartRepo.AddItem(item), nil
 }
@@ -63,7 +58,9 @@ func (s *CartService) RemoveFromCart(userID, itemID int) error {
 	return s.cartRepo.RemoveItem(itemID, cart.ID)
 }
 
-// Checkout finalizes the user's cart, deducts stock, and marks it as checked out
+// Checkout finalizes the user's cart, deducts stock, and marks it as checked out.
+// All stock deductions happen inside a single database transaction with row-level locks
+// so concurrent checkouts cannot both succeed against the same stock.
 func (s *CartService) Checkout(userID int) error {
 	// Get the user's active cart
 	cart, err := s.cartRepo.GetCartByUser(userID)
@@ -76,35 +73,7 @@ func (s *CartService) Checkout(userID int) error {
 		return errors.New("cart is empty")
 	}
 
-	// First pass: validate all items have sufficient stock before deducting anything
-	// This prevents a partial checkout where some phones get deducted but a later one fails
-	for _, item := range cart.Items {
-		phone, err := s.phoneRepo.GetByID(item.PhoneID)
-		if err != nil {
-			return errors.New("a phone in your cart no longer exists")
-		}
-		if phone.Stock < item.Quantity {
-			return errors.New("insufficient stock for one or more items in your cart")
-		}
-	}
-
-	// Second pass: deduct stock for each item now that all items are confirmed available
-	for _, item := range cart.Items {
-		// Re-fetch phone to get the latest stock value
-		phone, err := s.phoneRepo.GetByID(item.PhoneID)
-		if err != nil {
-			return err
-		}
-
-		// Deduct the purchased quantity from stock
-		phone.Stock -= item.Quantity
-
-		// Persist the updated stock
-		if err := s.phoneRepo.Update(phone); err != nil {
-			return err
-		}
-	}
-
-	// Mark the cart as checked out in the repository
-	return s.cartRepo.CheckoutCart(cart.ID)
+	// Pass items into CheckoutCart — locking, validation, and deduction all happen
+	// inside a single transaction in the repository layer
+	return s.cartRepo.CheckoutCart(cart.ID, cart.Items)
 }

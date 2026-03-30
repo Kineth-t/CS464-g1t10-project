@@ -62,6 +62,37 @@ func (r *PhoneRepository) GetByID(id int) (model.Phone, error) {
 	return p, nil
 }
 
+// CheckStockAndReserve checks stock inside a transaction with FOR UPDATE to prevent
+// two users from adding the last item to their carts at the same time.
+// Returns the current price so the cart item always captures the price at time of add.
+func (r *PhoneRepository) CheckStockAndReserve(phoneID, quantity int) (float64, error) {
+	// Begin transaction
+	tx, err := r.db.Begin(context.Background())
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback(context.Background())
+
+	// Lock the phone row — concurrent adds to cart for the same phone will queue here
+	var stock int
+	var price float64
+	err = tx.QueryRow(context.Background(),
+		`SELECT stock, price FROM phones WHERE id=$1 FOR UPDATE`, phoneID,
+	).Scan(&stock, &price)
+	if err != nil {
+		return 0, errors.New("phone not found")
+	}
+
+	// Validate stock is sufficient
+	if stock < quantity {
+		return 0, errors.New("insufficient stock")
+	}
+
+	// Commit — releases the lock without changing any data.
+	// Stock is only deducted at checkout, not when adding to cart.
+	return price, tx.Commit(context.Background())
+}
+
 // Create inserts a new phone into database
 func (r *PhoneRepository) Create(p model.Phone) model.Phone {
 
