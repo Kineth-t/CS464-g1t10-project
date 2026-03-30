@@ -31,7 +31,7 @@ func (r *UserRepository) Create(u model.User) (model.User, error) {
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id`,
 		u.Username,
-		u.Password, // should already be hashed before storing
+		u.Password, // hashed before storing
 		u.PhoneNumber,
 		u.Address.Street,
 		u.Address.City,
@@ -64,7 +64,7 @@ func (r *UserRepository) FindByUsername(username string) (model.User, error) {
 		username,
 	)
 
-	// Map DB fields → struct fields
+	// Map DB fields -> struct fields
 	err := row.Scan(
 		&u.ID,
 		&u.Username,
