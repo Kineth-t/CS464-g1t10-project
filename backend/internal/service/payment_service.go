@@ -74,6 +74,10 @@ func (s *PaymentService) ProcessPayment(userID int, req PaymentRequest) (Payment
 		PaymentMethod:      stripe.String(req.PaymentMethodID),
 		ConfirmationMethod: stripe.String("manual"),
 		Confirm:            stripe.Bool(true),
+		AutomaticPaymentMethods: &stripe.PaymentIntentAutomaticPaymentMethodsParams{
+			Enabled:         stripe.Bool(true),
+			AllowRedirects:  stripe.String("never"),
+		},
 	}
 
 	// Call the Stripe API — this is where the real test charge happens
