@@ -669,7 +669,7 @@
           }
         },
         {
-          "name": "Add item back for checkout",
+          "name": "Add item back for payment",
           "event": [
             {
               "listen": "test",
@@ -692,31 +692,36 @@
               "raw": "{\n  \"phone_id\": {{phoneId}},\n  \"quantity\": 1\n}"
             }
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Payment",
+      "item": [
         {
-          "name": "Checkout",
+          "name": "Pay - unauthenticated",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Checkout successful', () => {",
-                  "  const res = pm.response.json();",
-                  "  pm.expect(res.message).to.eql('checkout successful');",
-                  "});"
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));"
                 ]
               }
             }
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
-            "url": "{{baseUrl}}/cart/checkout"
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/pay",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method_id\": \"pm_card_visa\"\n}"
+            }
           }
         },
         {
-          "name": "Checkout - empty cart",
+          "name": "Pay - missing payment method",
           "event": [
             {
               "listen": "test",
@@ -729,8 +734,122 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
-            "url": "{{baseUrl}}/cart/checkout"
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" }
+            ],
+            "url": "{{baseUrl}}/pay",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method_id\": \"\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Pay - card declined",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" }
+            ],
+            "url": "{{baseUrl}}/pay",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method_id\": \"pm_card_visa_chargeDeclined\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Pay - insufficient funds",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" }
+            ],
+            "url": "{{baseUrl}}/pay",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method_id\": \"pm_card_visa_chargeDeclinedInsufficientFunds\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Pay - success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Payment succeeded', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.status).to.eql('succeeded');",
+                  "  pm.expect(res.payment_id).to.include('pi_');",
+                  "  pm.expect(res.total_amount).to.be.above(0);",
+                  "  pm.expect(res.message).to.eql('payment successful');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" }
+            ],
+            "url": "{{baseUrl}}/pay",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method_id\": \"pm_card_visa\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Pay - empty cart",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" }
+            ],
+            "url": "{{baseUrl}}/pay",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method_id\": \"pm_card_visa\"\n}"
+            }
           }
         }
       ]
