@@ -72,7 +72,6 @@ func (s *PaymentService) ProcessPayment(userID int, req PaymentRequest) (Payment
 		Amount:             stripe.Int64(totalCents),
 		Currency:           stripe.String(currency),
 		PaymentMethod:      stripe.String(req.PaymentMethodID),
-		ConfirmationMethod: stripe.String("manual"),
 		Confirm:            stripe.Bool(true),
 		AutomaticPaymentMethods: &stripe.PaymentIntentAutomaticPaymentMethodsParams{
 			Enabled:         stripe.Bool(true),
