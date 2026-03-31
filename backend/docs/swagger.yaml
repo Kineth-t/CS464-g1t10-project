@@ -48,6 +48,8 @@ definitions:
         type: string
       id:
         type: integer
+      image_url:
+        type: string
       model:
         type: string
       price:
@@ -75,6 +77,22 @@ definitions:
         $ref: '#/definitions/model.Role'
       username:
         type: string
+    type: object
+  service.PaymentRequest:
+    properties:
+      payment_method_id:
+        type: string
+    type: object
+  service.PaymentResult:
+    properties:
+      message:
+        type: string
+      payment_id:
+        type: string
+      status:
+        type: string
+      total_amount:
+        type: number
     type: object
 host: localhost:8080
 info:
@@ -267,6 +285,37 @@ paths:
       summary: Checkout the cart
       tags:
       - cart
+  /pay:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Stripe payment method ID
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/service.PaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/service.PaymentResult'
+        "400":
+          description: invalid body / card declined / insufficient stock
+          schema:
+            type: string
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Pay for the current cart using Stripe
+      tags:
+      - payment
   /phones:
     get:
       produces:
@@ -415,39 +464,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a phone (admin only)
-      tags:
-      - phones
-  /purchase:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Purchase payload
-        in: body
-        name: body
-        required: true
-        schema:
-          properties:
-            phone_id:
-              type: integer
-            quantity:
-              type: integer
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            properties:
-              message:
-                type: string
-            type: object
-        "400":
-          description: invalid body or insufficient stock
-          schema:
-            type: string
-      summary: Purchase a phone directly (no cart)
       tags:
       - phones
 securityDefinitions:
