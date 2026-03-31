@@ -24,15 +24,15 @@ A full-stack mobile phone e-commerce application built for CS464. Customers can 
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Backend | Go 1.25 · `net/http` · `golang-jwt/jwt v5` |
-| Database | PostgreSQL 16 · `pgx/v5` connection pool |
-| Frontend | React 19 · Vite 8 · React Router 7 |
-| Styling | Tailwind CSS v4 · shadcn/ui (Base UI variant) |
-| Icons | Lucide React |
-| Toasts | Sonner |
-| Containerisation | Docker · Docker Compose |
+| Layer            | Technology                                      |
+| ---------------- | ----------------------------------------------- |
+| Backend          | Go 1.25 ·`net/http` · `golang-jwt/jwt v5` |
+| Database         | PostgreSQL 16 ·`pgx/v5` connection pool      |
+| Frontend         | React 19 · Vite 8 · React Router 7            |
+| Styling          | Tailwind CSS v4 · shadcn/ui (Base UI variant)  |
+| Icons            | Lucide React                                    |
+| Toasts           | Sonner                                          |
+| Containerisation | Docker · Docker Compose                        |
 
 ---
 
@@ -128,47 +128,47 @@ The schema is applied automatically on first Docker startup via `backend/migrati
 
 ### `users`
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | SERIAL PK | |
-| `username` | VARCHAR(100) | Unique, required |
-| `password` | TEXT | bcrypt-hashed |
-| `phone_number` | VARCHAR(20) | |
-| `street` | TEXT | Address fields |
-| `city` | VARCHAR(100) | |
-| `state` | VARCHAR(100) | |
-| `country` | VARCHAR(100) | |
-| `zip_code` | VARCHAR(20) | |
-| `role` | VARCHAR(20) | `'customer'` or `'admin'` |
+| Column           | Type         | Notes                         |
+| ---------------- | ------------ | ----------------------------- |
+| `id`           | SERIAL PK    |                               |
+| `username`     | VARCHAR(100) | Unique, required              |
+| `password`     | TEXT         | bcrypt-hashed                 |
+| `phone_number` | VARCHAR(20)  |                               |
+| `street`       | TEXT         | Address fields                |
+| `city`         | VARCHAR(100) |                               |
+| `state`        | VARCHAR(100) |                               |
+| `country`      | VARCHAR(100) |                               |
+| `zip_code`     | VARCHAR(20)  |                               |
+| `role`         | VARCHAR(20)  | `'customer'` or `'admin'` |
 
 ### `phones`
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | SERIAL PK | |
-| `brand` | VARCHAR(100) | Required |
-| `model` | VARCHAR(100) | Required |
-| `price` | NUMERIC(10,2) | Required |
-| `stock` | INT | Default 0 |
-| `description` | TEXT | |
+| Column          | Type          | Notes     |
+| --------------- | ------------- | --------- |
+| `id`          | SERIAL PK     |           |
+| `brand`       | VARCHAR(100)  | Required  |
+| `model`       | VARCHAR(100)  | Required  |
+| `price`       | NUMERIC(10,2) | Required  |
+| `stock`       | INT           | Default 0 |
+| `description` | TEXT          |           |
 
 ### `carts`
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | SERIAL PK | |
-| `user_id` | INT FK | References `users(id)` |
-| `status` | VARCHAR(20) | `'active'` or `'checked_out'` |
+| Column      | Type        | Notes                             |
+| ----------- | ----------- | --------------------------------- |
+| `id`      | SERIAL PK   |                                   |
+| `user_id` | INT FK      | References `users(id)`          |
+| `status`  | VARCHAR(20) | `'active'` or `'checked_out'` |
 
 ### `cart_items`
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | SERIAL PK | |
-| `cart_id` | INT FK | References `carts(id)` — cascades on delete |
-| `phone_id` | INT FK | References `phones(id)` |
-| `quantity` | INT | Required |
-| `price` | NUMERIC(10,2) | Price at time of add |
+| Column       | Type          | Notes                                          |
+| ------------ | ------------- | ---------------------------------------------- |
+| `id`       | SERIAL PK     |                                                |
+| `cart_id`  | INT FK        | References `carts(id)` — cascades on delete |
+| `phone_id` | INT FK        | References `phones(id)`                      |
+| `quantity` | INT           | Required                                       |
+| `price`    | NUMERIC(10,2) | Price at time of add                           |
 
 ---
 
@@ -177,18 +177,20 @@ The schema is applied automatically on first Docker startup via `backend/migrati
 Base URL: `http://localhost:8080`
 
 All protected routes require the header:
+
 ```
 Authorization: Bearer <jwt_token>
 ```
 
 ### Auth
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/auth/register` | None | Create a new customer account |
-| POST | `/auth/login` | None | Login and receive a JWT token |
+| Method | Path               | Auth | Description                   |
+| ------ | ------------------ | ---- | ----------------------------- |
+| POST   | `/auth/register` | None | Create a new customer account |
+| POST   | `/auth/login`    | None | Login and receive a JWT token |
 
 **POST `/auth/register`**
+
 ```json
 // Request body
 {
@@ -208,6 +210,7 @@ Authorization: Bearer <jwt_token>
 ```
 
 **POST `/auth/login`**
+
 ```json
 // Request body
 { "username": "john", "password": "secret123" }
@@ -219,15 +222,16 @@ Authorization: Bearer <jwt_token>
 
 ### Phones
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/phones` | None | List all phones |
-| GET | `/phones/{id}` | None | Get a single phone |
-| POST | `/phones` | Admin only | Create a phone listing |
-| PUT | `/phones/{id}` | Admin only | Update a phone listing |
+| Method | Path             | Auth       | Description            |
+| ------ | ---------------- | ---------- | ---------------------- |
+| GET    | `/phones`      | None       | List all phones        |
+| GET    | `/phones/{id}` | None       | Get a single phone     |
+| POST   | `/phones`      | Admin only | Create a phone listing |
+| PUT    | `/phones/{id}` | Admin only | Update a phone listing |
 | DELETE | `/phones/{id}` | Admin only | Delete a phone listing |
 
 **GET `/phones`**
+
 ```json
 // Response 200
 [
@@ -236,6 +240,7 @@ Authorization: Bearer <jwt_token>
 ```
 
 **POST `/phones`** (Admin)
+
 ```json
 // Request body
 { "brand": "Samsung", "model": "Galaxy S24", "price": 699.99, "stock": 5, "description": "..." }
@@ -248,14 +253,15 @@ Authorization: Bearer <jwt_token>
 
 All cart routes require authentication.
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/cart` | Authenticated | Get current user's cart |
-| POST | `/cart` | Authenticated | Add item to cart |
-| DELETE | `/cart/{itemId}` | Authenticated | Remove item from cart |
-| POST | `/cart/checkout` | Authenticated | Checkout the cart — deducts stock |
+| Method | Path               | Auth          | Description                        |
+| ------ | ------------------ | ------------- | ---------------------------------- |
+| GET    | `/cart`          | Authenticated | Get current user's cart            |
+| POST   | `/cart`          | Authenticated | Add item to cart                   |
+| DELETE | `/cart/{itemId}` | Authenticated | Remove item from cart              |
+| POST   | `/cart/checkout` | Authenticated | Checkout the cart — deducts stock |
 
 **GET `/cart`**
+
 ```json
 // Response 200
 {
@@ -269,6 +275,7 @@ All cart routes require authentication.
 ```
 
 **POST `/cart`**
+
 ```json
 // Request body
 { "phone_id": 1, "quantity": 1 }
@@ -284,6 +291,7 @@ All cart routes require authentication.
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) — the only requirement to run the backend and database
 
 For frontend development only:
+
 - **Node.js** 18 or later + npm — [nodejs.org](https://nodejs.org)
 
 ---
@@ -292,11 +300,11 @@ For frontend development only:
 
 The default values in `backend/docker-compose.yml` work out of the box for local development. To change them edit the `environment` section under the `api` service:
 
-| Variable | Default | Description |
-|---|---|---|
-| `DATABASE_URL` | `postgres://postgres:postgres@db:5432/phones_db` | PostgreSQL connection string |
-| `JWT_SECRET` | `change-me-in-production` | Secret key for signing JWT tokens |
-| `ADMIN_PASSWORD` | `adminpassword` | Password for the seeded admin account |
+| Variable           | Default                                            | Description                           |
+| ------------------ | -------------------------------------------------- | ------------------------------------- |
+| `DATABASE_URL`   | `postgres://postgres:postgres@db:5432/phones_db` | PostgreSQL connection string          |
+| `JWT_SECRET`     | `change-me-in-production`                        | Secret key for signing JWT tokens     |
+| `ADMIN_PASSWORD` | `adminpassword`                                  | Password for the seeded admin account |
 
 ---
 
@@ -308,29 +316,33 @@ docker compose up --build -d
 ```
 
 This will:
+
 1. Build the Go binary inside a Docker build stage
 2. Start a PostgreSQL 16 container and automatically run `migrations/001_init.sql`
 3. Start the API container once the database is healthy
 4. Seed an `admin` user using the `ADMIN_PASSWORD` environment variable
 
 Verify it is running:
+
 ```bash
 docker compose logs -f api
 ```
 
 You should see:
+
 ```
 Connected to database
 Admin user seeded
 Server running on :8080
 ```
 
-| Service | URL |
-|---|---|
+| Service     | URL                   |
+| ----------- | --------------------- |
 | Backend API | http://localhost:8080 |
-| PostgreSQL | localhost:5432 |
+| PostgreSQL  | localhost:5432        |
 
 **Stopping the containers:**
+
 ```bash
 # Stop containers
 docker compose down
@@ -340,16 +352,17 @@ docker compose down -v
 ```
 
 **Starting the frontend:**
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-| Service | URL |
-|---|---|
+| Service  | URL                   |
+| -------- | --------------------- |
 | Frontend | http://localhost:5173 |
-| Backend | http://localhost:8080 |
+| Backend  | http://localhost:8080 |
 
 ---
 
@@ -371,11 +384,11 @@ go run ./cmd/api
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|---|---|---|
-| `DATABASE_URL` | Yes | PostgreSQL DSN, e.g. `postgres://user:pass@localhost:5432/phones_db` |
-| `JWT_SECRET` | Yes | Secret used to sign JWT tokens — change this in production |
-| `ADMIN_PASSWORD` | Yes | Password for the seeded `admin` account |
+| Variable           | Required | Description                                                           |
+| ------------------ | -------- | --------------------------------------------------------------------- |
+| `DATABASE_URL`   | Yes      | PostgreSQL DSN, e.g.`postgres://user:pass@localhost:5432/phones_db` |
+| `JWT_SECRET`     | Yes      | Secret used to sign JWT tokens — change this in production           |
+| `ADMIN_PASSWORD` | Yes      | Password for the seeded `admin` account                             |
 
 ---
 
@@ -386,6 +399,7 @@ Ringr Mobile uses **JWT (JSON Web Tokens)** with HMAC-SHA256 signing.
 **Token lifetime:** 24 hours from login.
 
 **Token payload:**
+
 ```json
 {
   "user_id": 1,
@@ -396,6 +410,7 @@ Ringr Mobile uses **JWT (JSON Web Tokens)** with HMAC-SHA256 signing.
 ```
 
 **Using the token:**
+
 ```
 Authorization: Bearer eyJhbGci...
 ```
@@ -407,24 +422,26 @@ The frontend stores the token in `localStorage` and automatically attaches it to
 ## Features
 
 - **Customer**
+
   - Register and log in
   - Browse the phone catalog with live search by brand or model
   - View phone details, stock availability, and description
   - Add phones to cart
   - Remove individual items from cart
-  - Checkout cart — validates and deducts stock atomically on completion
-
+  - Checkout cart — stock deduction and validation happen inside a single database transaction with row-level locks, preventing overselling under concurrent load
 - **Admin**
+
   - All customer features
   - Create, edit, and delete phone listings from the Admin panel
   - Role assigned at account seed time (admin) or via direct database update
-
 - **General**
+
   - JWT-based stateless authentication
   - Role-based access control enforced on both backend middleware and frontend route guards
   - Password hashing with bcrypt
   - Responsive UI with dark-mode CSS variables
   - Fully containerised backend and database with Docker
+  - Race-condition safe cart - adding to cart uses SELECT FOR UPDATE to prevent two users claiming the last unit simultaneously
 
 ---
 
