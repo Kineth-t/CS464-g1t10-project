@@ -10,7 +10,7 @@ import (
 )
 
 // Setup initializes all routes and returns the main HTTP handler
-func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHandler) http.Handler {
+func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHandler, pyh *handler.PaymentHandler) http.Handler {
 	mux := http.NewServeMux() // Main router
 
 	// ========================
@@ -131,6 +131,21 @@ func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHa
 	// Apply authentication middleware to ALL /cart routes
 	mux.Handle("/cart", middleware.RequireAuth(cartMux))
 	mux.Handle("/cart/", middleware.RequireAuth(cartMux))
+
+	// ========================
+	// Payment routes (PROTECTED)
+	// ========================
+	mux.Handle("/pay", middleware.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Process Stripe payment for the user's active cart
+		pyh.Pay(w, r)
+	})))
 
 	// Swagger UI
 	mux.Handle("/swagger/", httpSwagger.WrapHandler)
