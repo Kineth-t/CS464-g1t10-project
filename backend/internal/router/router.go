@@ -147,6 +147,31 @@ func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHa
 		pyh.Pay(w, r)
 	})))
 
+
+	// ========================
+	// Order routes (PROTECTED)
+	// ========================
+	// Order routes (protected) — read-only, no mutations
+	mux.Handle("/orders", middleware.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		// List all orders for the logged in user
+		pyh.GetOrders(w, r)
+	})))
+
+	mux.Handle("/orders/", middleware.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		// Get a single order by Stripe payment intent ID
+		pyh.GetOrder(w, r)
+	})))
+
 	// Swagger UI
 	mux.Handle("/swagger/", httpSwagger.WrapHandler)
 

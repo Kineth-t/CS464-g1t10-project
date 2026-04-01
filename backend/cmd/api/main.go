@@ -47,12 +47,13 @@ func main() {
 	phoneRepo := pg.NewPhoneRepository(db)
 	userRepo  := pg.NewUserRepository(db)
 	cartRepo  := pg.NewCartRepository(db)
+	orderRepo := pg.NewOrderRepository(db)
 
 	// Services
 	phoneSvc := service.NewPhoneService(phoneRepo)
 	authSvc  := service.NewAuthService(userRepo)
 	cartSvc  := service.NewCartService(cartRepo, phoneRepo)
-	paymentSvc := service.NewPaymentService(cartRepo, phoneRepo)
+	paymentSvc := service.NewPaymentService(cartRepo, phoneRepo, orderRepo)
 
 	// Seed admin if not exists
 	seedAdmin(userRepo)

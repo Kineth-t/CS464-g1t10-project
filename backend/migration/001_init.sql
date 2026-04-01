@@ -36,6 +36,22 @@ CREATE TABLE cart_items (
     UNIQUE (cart_id, phone_id)
 );
 
+CREATE TABLE orders (
+    id         TEXT PRIMARY KEY,
+    user_id    INT NOT NULL REFERENCES users(id),
+    status     VARCHAR(20) NOT NULL DEFAULT 'succeeded',
+    total      NUMERIC(10,2) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE order_items (
+    id       SERIAL PRIMARY KEY,
+    order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    phone_id INT NOT NULL REFERENCES phones(id),
+    quantity INT NOT NULL,
+    price    NUMERIC(10,2) NOT NULL
+);
+
 -- ================================================
 -- Seed phones (prices in SGD)
 -- ================================================

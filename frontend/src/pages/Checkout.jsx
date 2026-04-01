@@ -230,12 +230,13 @@ export default function Checkout() {
     if (form.cvv.length < 3)          return setFeedback({ ok: false, msg: 'CVV must be at least 3 digits.' });
     if (!form.cardHolder.trim())      return setFeedback({ ok: false, msg: 'Card holder name is required.' });
 
+    const orderId = generateOrderId();
     setProcessing(true);
     try {
       const paymentMethodId = getStripeTestMethodId();
-      await paymentAPI.pay(paymentMethodId);
+      await paymentAPI.pay(paymentMethodId, orderId);
       setOrderMeta({
-        orderId:   generateOrderId(),
+        orderId:   orderId,
         orderDate: new Date().toLocaleString('en-SG', {
           dateStyle: 'medium',
           timeStyle: 'short',

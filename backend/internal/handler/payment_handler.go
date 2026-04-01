@@ -41,3 +41,31 @@ func (h *PaymentHandler) Pay(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(result)
 }
+
+// GetOrders returns all orders for the logged in user
+func (h *PaymentHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(middleware.UserIDKey).(int)
+	orders, err := h.service.GetOrders(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(orders)
+}
+
+// GetOrder returns a single order for the logged in user
+func (h *PaymentHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(middleware.UserIDKey).(int)
+	// Order ID is a Stripe pi_xxx string, not an integer
+	orderID := strings.TrimPrefix(r.URL.Path, "/orders/")
+	if orderID == "" {
+		http.Error(w, "invalid order id", http.StatusBadRequest)
+		return
+	}
+	order, err := h.service.GetOrder(userID, orderID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	json.NewEncoder(w).Encode(order)
+}
