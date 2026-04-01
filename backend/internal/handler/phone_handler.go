@@ -28,8 +28,14 @@ func NewPhoneHandler(s *service.PhoneService) *PhoneHandler {
 // @Success      200  {array}   model.Phone
 // @Router       /phones [get]
 func (h *PhoneHandler) ListPhones(w http.ResponseWriter, r *http.Request) {
-	// Directly call service and return result as JSON
-	json.NewEncoder(w).Encode(h.service.ListPhones())
+    phones, err := h.service.GetAll()
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(phones)
 }
 
 // GetPhone returns a single phone by ID

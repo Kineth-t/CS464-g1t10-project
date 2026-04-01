@@ -8,7 +8,7 @@ import (
 )
 
 type PhoneRepo interface {
-	GetAll() []model.Phone
+	GetAll() ([]model.Phone, error)
 	GetByID(id int) (model.Phone, error)
 	CheckStockAndReserve(phoneID, quantity int) (float64, error) // locked stock check
 	Create(p model.Phone) model.Phone

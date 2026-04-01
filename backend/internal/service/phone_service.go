@@ -18,8 +18,12 @@ func NewPhoneService(repo repository.PhoneRepo) *PhoneService {
 }
 
 // ListPhones returns all phones
-func (s *PhoneService) ListPhones() []model.Phone {
-	return s.repo.GetAll() // Directly fetches all phones from repository
+func (s *PhoneService) GetAll() ([]model.Phone, error) {
+    phones, err := s.repo.GetAll() // Directly get all the phones in the database
+    if err != nil {
+        return nil, err 
+    }
+    return phones, nil
 }
 
 // GetPhone returns a single phone by ID

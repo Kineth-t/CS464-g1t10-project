@@ -3,6 +3,7 @@ package postgres
 import (
 	"context" // Used for DB operations
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -20,29 +21,45 @@ func NewPhoneRepository(db *pgxpool.Pool) *PhoneRepository {
 }
 
 // GetAll retrieves all phones from database
-func (r *PhoneRepository) GetAll() []model.Phone {
-
-	// Execute SELECT query
+func (r *PhoneRepository) GetAll() ([]model.Phone, error) {
+	// Execute SQL query to fetch all phones
 	rows, err := r.db.Query(context.Background(),
-		`SELECT id, brand, model, price, stock, description, image_url FROM phones`)
+		`SELECT id, brand, model, price, stock, description, image_url
+		 FROM phones
+		 ORDER BY id ASC`)
 	if err != nil {
-		return nil // returns nil if query fails
+		return nil, fmt.Errorf("failed to query phones: %w", err)
 	}
 	defer rows.Close()
 
 	var phones []model.Phone
 
-	// Loop through result rows
+	// Iterate through result set
 	for rows.Next() {
 		var p model.Phone
 
-		// Map DB columns -> struct fields
-		rows.Scan(&p.ID, &p.Brand, &p.Model, &p.Price, &p.Stock, &p.Description, &p.ImageURL)
+		// Scan row into struct
+		if err := rows.Scan(
+			&p.ID,
+			&p.Brand,
+			&p.Model,
+			&p.Price,
+			&p.Stock,
+			&p.Description,
+			&p.ImageURL,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan phone row: %w", err)
+		}
 
 		phones = append(phones, p)
 	}
 
-	return phones
+	// Check for errors that occurred during iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error while iterating rows: %w", err)
+	}
+
+	return phones, nil
 }
 
 // GetByID retrieves a phone by its ID
