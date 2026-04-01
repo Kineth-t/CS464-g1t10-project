@@ -38,20 +38,6 @@ export default function Cart() {
     }
   }
 
-  async function handleCheckout() {
-    setCheckingOut(true);
-    setFeedback(null);
-    try {
-      await cartAPI.checkout();
-      setFeedback({ ok: true, msg: 'Order placed successfully!' });
-      setCart(null);
-    } catch (e) {
-      setFeedback({ ok: false, msg: e.message });
-    } finally {
-      setCheckingOut(false);
-    }
-  }
-
   if (loading) return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="animate-pulse space-y-4">
@@ -128,8 +114,8 @@ export default function Cart() {
                 ${cart.items.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0).toFixed(2)}
               </p>
             </div>
-            <Button size="lg" onClick={handleCheckout} disabled={checkingOut}>
-              {checkingOut ? 'Processing...' : 'Checkout'}
+             <Button size="lg" onClick={() => navigate('/checkout')}>
+              Checkout
             </Button>
           </CardFooter>
         </Card>

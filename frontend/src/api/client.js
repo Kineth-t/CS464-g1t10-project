@@ -48,3 +48,12 @@ export const cartAPI = {
   remove: (itemId) => request(`/cart/${itemId}`, { method: 'DELETE' }),
   checkout: () => request('/cart/checkout', { method: 'POST' }),
 };
+
+// Checkout payment
+export const paymentAPI = {
+  pay: (paymentMethodId) =>
+    request('/pay', {
+      method: 'POST',
+      body: JSON.stringify({ payment_method_id: paymentMethodId }),
+    }),
+}
