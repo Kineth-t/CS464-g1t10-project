@@ -69,28 +69,45 @@ export default function PhoneDetail() {
         <ArrowLeft className="h-4 w-4 mr-1" /> Back
       </Button>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="md:col-span-2 space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+
+        {/* Left — image */}
+        <div className="flex items-center justify-center rounded-xl border bg-muted/30 p-8">
+          {phone.image_url ? (
+            <img
+              src={phone.image_url}
+              alt={`${phone.brand} ${phone.model}`}
+              className="w-full max-w-sm object-contain drop-shadow-md"
+            />
+          ) : (
+            <div className="flex items-center justify-center w-full h-64 text-muted-foreground text-sm">
+              No image available
+            </div>
+          )}
+        </div>
+
+        {/* Right — details + add to cart */}
+        <div className="space-y-6">
           <div>
             <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">{phone.brand}</p>
             <h1 className="text-3xl font-bold mt-1">{phone.model}</h1>
           </div>
+
           <div className="flex items-center gap-3">
-            <span className="text-4xl font-bold">${Number(phone.price).toFixed(2)}</span>
+            <span className="text-4xl font-bold">S${Number(phone.price).toFixed(2)}</span>
             {outOfStock
               ? <Badge variant="destructive">Out of stock</Badge>
               : <Badge variant="secondary">{phone.stock} units available</Badge>
             }
           </div>
+
           {phone.description && (
             <>
               <Separator />
               <p className="text-muted-foreground leading-relaxed">{phone.description}</p>
             </>
           )}
-        </div>
 
-        <div>
           <Card>
             <CardContent className="pt-6 space-y-4">
               <div className="space-y-2">
@@ -128,6 +145,7 @@ export default function PhoneDetail() {
             </CardContent>
           </Card>
         </div>
+
       </div>
     </div>
   );

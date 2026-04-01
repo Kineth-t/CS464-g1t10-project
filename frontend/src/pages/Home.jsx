@@ -46,6 +46,7 @@ export default function Home() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {[...Array(8)].map((_, i) => (
             <Card key={i} className="animate-pulse">
+              <div className="h-48 bg-muted rounded-t-lg" />
               <CardHeader><div className="h-5 bg-muted rounded w-3/4" /></CardHeader>
               <CardContent><div className="h-4 bg-muted rounded w-1/2" /></CardContent>
             </Card>
@@ -72,11 +73,25 @@ export default function Home() {
           {filtered.map((phone) => (
             <Link to={`/phones/${phone.id}`} key={phone.id} className="group">
               <Card className="h-full flex flex-col transition-shadow hover:shadow-md">
+
+                <div className="flex items-center justify-center bg-muted/30 rounded-t-lg h-48 px-4 pt-4">
+                  {phone.image_url ? (
+                    <img
+                      src={phone.image_url}
+                      alt={`${phone.brand} ${phone.model}`}
+                      className="h-full w-full object-contain drop-shadow-sm"
+                    />
+                  ) : (
+                    <Package className="h-16 w-16 text-muted-foreground opacity-30" />
+                  )}
+                </div>
+
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">{phone.brand} {phone.model}</CardTitle>
                 </CardHeader>
+
                 <CardContent className="flex-1 pb-3">
-                  <p className="text-2xl font-bold text-primary">${Number(phone.price).toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-primary">S${Number(phone.price).toFixed(2)}</p>
                   <div className="mt-2">
                     {phone.stock > 0
                       ? <Badge variant="secondary">{phone.stock} in stock</Badge>
@@ -87,11 +102,13 @@ export default function Home() {
                     <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{phone.description}</p>
                   )}
                 </CardContent>
+
                 <CardFooter>
                   <Button variant="outline" size="sm" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                     View Details
                   </Button>
                 </CardFooter>
+
               </Card>
             </Link>
           ))}
