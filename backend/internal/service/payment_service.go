@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/stripe/stripe-go/v76"
@@ -119,22 +120,16 @@ func (s *PaymentService) ProcessPayment(userID int, req PaymentRequest) (Payment
 
 	// Persist the order — use the Stripe payment intent ID as the order ID
 	order, err := s.orderRepo.Create(model.Order{
-		ID:     pi.ID, // pi_xxx from Stripe is the order ID
+		ID:     pi.ID,
 		UserID: userID,
 		Status: string(pi.Status),
 		Total:  float64(totalCents) / 100,
 		Items:  orderItems,
 	})
 	if err != nil {
-		// Payment and checkout succeeded — order record failed to save
-		// Not critical enough to fail the request, log and continue
-		order = model.Order{
-			ID:     pi.ID,
-			UserID: userID,
-			Status: string(pi.Status),
-			Total:  float64(totalCents) / 100,
-			Items:  orderItems,
-		}
+		// Log it properly — don't silently swallow it
+		// In production you'd also issue a Stripe refund here
+		return PaymentResult{}, fmt.Errorf("order save failed: %w", err)
 	}
 
 	return PaymentResult{

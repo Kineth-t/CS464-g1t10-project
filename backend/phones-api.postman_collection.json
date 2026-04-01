@@ -894,6 +894,117 @@
           }
         }
       ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Get orders - unauthenticated",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/orders"
+          }
+        },
+        {
+          "name": "Get orders",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res).to.be.an('array');",
+                  "});",
+                  "pm.test('Store first order ID', () => {",
+                  "  const res = pm.response.json();",
+                  "  if (res.length > 0) {",
+                  "    pm.collectionVariables.set('orderId', res[0].id);",
+                  "    console.log('Order ID saved:', res[0].id);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
+            "url": "{{baseUrl}}/orders"
+          }
+        },
+        {
+          "name": "Get order - unauthenticated",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/orders/{{orderId}}"
+          }
+        },
+        {
+          "name": "Get order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Correct order returned', () => {",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.id).to.eql(pm.collectionVariables.get('orderId'));",
+                  "  pm.expect(res.status).to.eql('succeeded');",
+                  "  pm.expect(res.total).to.be.above(0);",
+                  "  pm.expect(res.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
+            "url": "{{baseUrl}}/orders/{{orderId}}"
+          }
+        },
+        {
+          "name": "Get order - not found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
+            "url": "{{baseUrl}}/orders/pi_nonexistent"
+          }
+        }
+      ]
     }
   ]
 }

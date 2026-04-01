@@ -69,10 +69,15 @@ func (r *OrderRepository) GetByUserID(userID int) ([]model.Order, error) {
 	var orders []model.Order
 	for rows.Next() {
 		var o model.Order
-		rows.Scan(&o.ID, &o.UserID, &o.Status, &o.Total, &o.CreatedAt)
-		// Populate items for each order
+		if err := rows.Scan(&o.ID, &o.UserID, &o.Status, &o.Total, &o.CreatedAt); err != nil {
+			return nil, err  // was silently discarded before
+		}
 		o.Items, _ = r.getOrderItems(o.ID)
 		orders = append(orders, o)
+	}
+	// check rows.Err() after the loop
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return orders, nil
 }

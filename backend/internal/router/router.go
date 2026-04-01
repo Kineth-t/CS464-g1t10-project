@@ -10,7 +10,7 @@ import (
 )
 
 // Setup initializes all routes and returns the main HTTP handler
-func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHandler, pyh *handler.PaymentHandler) http.Handler {
+func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHandler, pyh *handler.PaymentHandler, oh *handler.OrderHandler) http.Handler {
 	mux := http.NewServeMux() // Main router
 
 	// ========================
@@ -159,7 +159,7 @@ func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHa
 			return
 		}
 		// List all orders for the logged in user
-		pyh.GetOrders(w, r)
+		oh.GetOrders(w, r)
 	})))
 
 	mux.Handle("/orders/", middleware.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -169,7 +169,7 @@ func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHa
 			return
 		}
 		// Get a single order by Stripe payment intent ID
-		pyh.GetOrder(w, r)
+		oh.GetOrder(w, r)
 	})))
 
 	// Swagger UI

@@ -54,6 +54,7 @@ func main() {
 	authSvc  := service.NewAuthService(userRepo)
 	cartSvc  := service.NewCartService(cartRepo, phoneRepo)
 	paymentSvc := service.NewPaymentService(cartRepo, phoneRepo, orderRepo)
+	orderSvc := service.NewOrderService(orderRepo)
 
 	// Seed admin if not exists
 	seedAdmin(userRepo)
@@ -63,8 +64,9 @@ func main() {
 	ah := handler.NewAuthHandler(authSvc)
 	ch := handler.NewCartHandler(cartSvc)
 	pyh := handler.NewPaymentHandler(paymentSvc)
+	oh := handler.NewOrderHandler(orderSvc)
 
-	r := router.Setup(ph, ah, ch, pyh)
+	r := router.Setup(ph, ah, ch, pyh, oh)
 
 	log.Println("----------------------------------------")
 	log.Println("  Ringr Mobile API")

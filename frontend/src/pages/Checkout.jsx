@@ -225,29 +225,28 @@ export default function Checkout() {
     setFeedback(null);
 
     const raw = form.cardNumber.replace(/\s/g, '');
-    if (raw.length !== 16)            return setFeedback({ ok: false, msg: 'Card number must be 16 digits.' });
-    if (!form.expiry.match(/^\d{2}\/\d{2}$/)) return setFeedback({ ok: false, msg: 'Expiry must be MM/YY.' });
-    if (form.cvv.length < 3)          return setFeedback({ ok: false, msg: 'CVV must be at least 3 digits.' });
-    if (!form.cardHolder.trim())      return setFeedback({ ok: false, msg: 'Card holder name is required.' });
+    if (raw.length !== 16)                      return setFeedback({ ok: false, msg: 'Card number must be 16 digits.' });
+    if (!form.expiry.match(/^\d{2}\/\d{2}$/))   return setFeedback({ ok: false, msg: 'Expiry must be MM/YY.' });
+    if (form.cvv.length < 3)                    return setFeedback({ ok: false, msg: 'CVV must be at least 3 digits.' });
+    if (!form.cardHolder.trim())                return setFeedback({ ok: false, msg: 'Card holder name is required.' });
 
-    const orderId = generateOrderId();
     setProcessing(true);
     try {
-      const paymentMethodId = getStripeTestMethodId();
-      await paymentAPI.pay(paymentMethodId, orderId);
-      setOrderMeta({
-        orderId:   orderId,
+        const payment_method_id = getStripeTestMethodId();
+        const result = await paymentAPI.pay({ payment_method_id });
+        setOrderMeta({
+        orderId: result.payment_id,
         orderDate: new Date().toLocaleString('en-SG', {
-          dateStyle: 'medium',
-          timeStyle: 'short',
+            dateStyle: 'medium',
+            timeStyle: 'short',
         }),
-      });
+        });
     } catch (err) {
-      setFeedback({ ok: false, msg: err.message });
+        setFeedback({ ok: false, msg: err.message });
     } finally {
-      setProcessing(false);
+        setProcessing(false);
     }
-  }
+    }
 
   const total = cart?.items?.reduce(
     (sum, item) => sum + Number(item.price) * item.quantity, 0

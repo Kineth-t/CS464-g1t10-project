@@ -51,12 +51,11 @@ export const cartAPI = {
 
 // Checkout payment
 export const paymentAPI = {
-  pay: ({ paymentMethodId, orderId }) =>
+  pay: ({ payment_method_id }) =>
     request('/pay', {
       method: 'POST',
       body: JSON.stringify({
-        payment_method_id: paymentMethodId,
-        order_id: orderId,
+        payment_method_id
       }),
     }),
 }
