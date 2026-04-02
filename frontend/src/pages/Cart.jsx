@@ -84,7 +84,7 @@ export default function Cart() {
                 {idx > 0 && <Separator />}
                 <div className="flex items-center justify-between px-6 py-4 gap-4">
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium">Phone #{item.phone_id}</p>
+                    <p className="font-medium">{item.phone_name || `Phone #${item.phone_id}`}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="secondary" className="text-xs">Qty: {item.quantity}</Badge>
                       <span className="text-sm text-muted-foreground">${Number(item.price).toFixed(2)} each</span>

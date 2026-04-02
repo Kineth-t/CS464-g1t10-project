@@ -160,9 +160,12 @@ func (r *CartRepository) CheckoutCart(cartID int, items []model.CartItem) error 
 func (r *CartRepository) getItems(cartID int) []model.CartItem {
 
 	rows, err := r.db.Query(context.Background(),
-		`SELECT id, cart_id, phone_id, quantity, price 
-		 FROM cart_items 
-		 WHERE cart_id=$1`, cartID)
+		`SELECT ci.id, ci.cart_id, ci.phone_id,
+		        COALESCE(p.brand || ' ' || p.model, '') AS phone_name,
+		        ci.quantity, ci.price
+		 FROM cart_items ci
+		 LEFT JOIN phones p ON p.id = ci.phone_id
+		 WHERE ci.cart_id=$1`, cartID)
 
 	if err != nil {
 		// Return empty list if query fails
@@ -177,7 +180,7 @@ func (r *CartRepository) getItems(cartID int) []model.CartItem {
 		var item model.CartItem
 
 		// Scan row into struct
-		rows.Scan(&item.ID, &item.CartID, &item.PhoneID, &item.Quantity, &item.Price)
+		rows.Scan(&item.ID, &item.CartID, &item.PhoneID, &item.PhoneName, &item.Quantity, &item.Price)
 
 		items = append(items, item)
 	}

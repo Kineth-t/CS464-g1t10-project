@@ -112,9 +112,10 @@ func (s *PaymentService) ProcessPayment(userID int, req PaymentRequest) (Payment
 	orderItems := make([]model.CartItem, len(cart.Items))
 	for i, item := range cart.Items {
 		orderItems[i] = model.CartItem{
-			PhoneID:  item.PhoneID,
-			Quantity: item.Quantity,
-			Price:    item.Price,
+			PhoneID:   item.PhoneID,
+			PhoneName: item.PhoneName,
+			Quantity:  item.Quantity,
+			Price:     item.Price,
 		}
 	}
 

@@ -42,10 +42,10 @@ func (r *OrderRepository) Create(order model.Order) (model.Order, error) {
 	// Insert each order item linked to the order
 	for i, item := range order.Items {
 		err = tx.QueryRow(context.Background(),
-			`INSERT INTO order_items (order_id, phone_id, quantity, price)
-			 VALUES ($1, $2, $3, $4)
+			`INSERT INTO order_items (order_id, phone_id, phone_name, quantity, price)
+			 VALUES ($1, $2, $3, $4, $5)
 			 RETURNING id`,
-			order.ID, item.PhoneID, item.Quantity, item.Price,
+			order.ID, item.PhoneID, item.PhoneName, item.Quantity, item.Price,
 		).Scan(&order.Items[i].ID)
 		if err != nil {
 			return model.Order{}, err
@@ -99,8 +99,12 @@ func (r *OrderRepository) GetByID(orderID string) (model.Order, error) {
 // getOrderItems fetches all items belonging to a given order
 func (r *OrderRepository) getOrderItems(orderID string) ([]model.CartItem, error) {
 	rows, err := r.db.Query(context.Background(),
-		`SELECT id, phone_id, quantity, price
-		 FROM order_items WHERE order_id=$1`, orderID)
+		`SELECT oi.id, oi.phone_id,
+		        COALESCE(oi.phone_name, p.brand || ' ' || p.model, '') AS phone_name,
+		        oi.quantity, oi.price
+		 FROM order_items oi
+		 LEFT JOIN phones p ON p.id = oi.phone_id
+		 WHERE oi.order_id=$1`, orderID)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +113,7 @@ func (r *OrderRepository) getOrderItems(orderID string) ([]model.CartItem, error
 	var items []model.CartItem
 	for rows.Next() {
 		var item model.CartItem
-		rows.Scan(&item.ID, &item.PhoneID, &item.Quantity, &item.Price)
+		rows.Scan(&item.ID, &item.PhoneID, &item.PhoneName, &item.Quantity, &item.Price)
 		items = append(items, item)
 	}
 	return items, nil

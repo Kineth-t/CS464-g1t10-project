@@ -45,11 +45,12 @@ CREATE TABLE orders (
 );
 
 CREATE TABLE order_items (
-    id       SERIAL PRIMARY KEY,
-    order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-    phone_id INT NOT NULL REFERENCES phones(id),
-    quantity INT NOT NULL,
-    price    NUMERIC(10,2) NOT NULL
+    id         SERIAL PRIMARY KEY,
+    order_id   TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    phone_id   INT NOT NULL REFERENCES phones(id),
+    phone_name TEXT NOT NULL DEFAULT '',
+    quantity   INT NOT NULL,
+    price      NUMERIC(10,2) NOT NULL
 );
 
 -- ================================================

@@ -11,6 +11,7 @@ type CartItem struct {
 	ID       int     `json:"id"`
 	CartID   int     `json:"cart_id"`
 	PhoneID  int     `json:"phone_id"`
+	PhoneName string  `json:"phone_name"`
 	Quantity int     `json:"quantity"`
 	Price    float64 `json:"price"`
 }

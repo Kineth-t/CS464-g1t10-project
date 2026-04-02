@@ -19,7 +19,7 @@ function generateOrderId() {
 function buildReceiptHTML({ orderId, orderDate, items, total, cardHolder }) {
   const rows = items.map(item => `
     <tr>
-      <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;">Phone #${item.phone_id}</td>
+      <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;">${item.phone_name || `Phone #${item.phone_id}`}</td>
       <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td>
       <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:right;">
         S$${(Number(item.price) * item.quantity).toFixed(2)}
@@ -427,7 +427,7 @@ export default function Checkout() {
                   {idx > 0 && <Separator />}
                   <div className="flex items-center justify-between px-6 py-3 gap-4">
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">Phone #{item.phone_id}</p>
+                      <p className="font-medium text-sm">{item.phone_name || `Phone #${item.phone_id}`}</p>
                       <Badge variant="secondary" className="text-xs mt-1">Qty: {item.quantity}</Badge>
                     </div>
                     <span className="font-semibold text-sm">
