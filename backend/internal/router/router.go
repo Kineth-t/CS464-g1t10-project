@@ -104,17 +104,17 @@ func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHa
 		}
 	})
 
-	cartMux.HandleFunc("/cart/checkout", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+	// cartMux.HandleFunc("/cart/checkout", func(w http.ResponseWriter, r *http.Request) {
+	// 	w.Header().Set("Content-Type", "application/json")
 
-		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
+	// 	if r.Method != http.MethodPost {
+	// 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	// 		return
+	// 	}
 
-		// Checkout cart
-		ch.Checkout(w, r)
-	})
+	// 	// Checkout cart
+	// 	ch.Checkout(w, r)
+	// })
 
 	cartMux.HandleFunc("/cart/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

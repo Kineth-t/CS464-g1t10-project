@@ -125,29 +125,7 @@ func (h *CartHandler) RemoveFromCart(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Checkout processes the user's cart into an order
-//
-// @Summary      Checkout the cart
-// @Tags         cart
-// @Produce      json
-// @Security     BearerAuth
-// @Success      200  {object}  object{message=string}
-// @Failure      400  {string}  string "cart empty or insufficient stock"
-// @Failure      401  {string}  string "unauthorized"
-// @Router       /cart/checkout [post]
-func (h *CartHandler) Checkout(w http.ResponseWriter, r *http.Request) {
-	// Get user ID from context
-	userID := r.Context().Value(middleware.UserIDKey).(int)
-
-	// Call service to perform checkout logic
-	if err := h.service.Checkout(userID); err != nil {
-		// If checkout fails (e.g., empty cart, insufficient stock)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Return success message
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "checkout successful",
-	})
-}
+// NOTE: The /cart/checkout route has been intentionally removed.
+// Stock deduction and cart checkout are handled atomically inside
+// PaymentService.ProcessPayment after a successful Stripe charge,
+// preventing double-deduction if both endpoints were called.
