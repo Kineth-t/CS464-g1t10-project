@@ -6,10 +6,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ShoppingCart, Shield, Smartphone, ChevronDown, LogOut } from 'lucide-react';
+import { ShoppingCart, Shield, Smartphone, ChevronDown, LogOut, ShoppingBag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Navbar() {
@@ -60,6 +61,10 @@ export default function Navbar() {
                 <ChevronDown className="h-3 w-3 opacity-50" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => navigate('/orders')} className="gap-2 cursor-pointer">
+                  <ShoppingBag className="h-4 w-4" /> My Orders
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive gap-2 cursor-pointer">
                   <LogOut className="h-4 w-4" /> Logout
                 </DropdownMenuItem>

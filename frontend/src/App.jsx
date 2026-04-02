@@ -10,6 +10,8 @@ import Cart from './pages/Cart';
 import Admin from './pages/Admin';
 import { Toaster } from '@/components/ui/sonner';
 import Checkout from './pages/Checkout';
+import Orders from './pages/Orders'
+import OrderDetail from './pages/OrderDetail'
 
 export default function App() {
   return (
@@ -25,6 +27,8 @@ export default function App() {
             <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
             <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+            <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+            <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
           </Routes>
         </main>
         <Toaster />

@@ -58,4 +58,10 @@ export const paymentAPI = {
         payment_method_id
       }),
     }),
+
+  getOrders: () =>
+    request('/orders'),
+
+  getOrder: (id) =>
+    request(`/orders/${id}`),
 }
