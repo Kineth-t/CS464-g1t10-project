@@ -67,27 +67,34 @@ CS464-g1t10-project/
 │   │   ├── handler/
 │   │   │   ├── auth_handler.go      # Register / Login
 │   │   │   ├── phone_handler.go     # Phone CRUD
-│   │   │   └── cart_handler.go      # Cart get/add/remove/checkout
+│   │   │   ├── cart_handler.go      # Cart get/add/remove
+│   │   │   ├── payment_handler.go   # Stripe payment processing
+│   │   │   └── order_handler.go     # Order history
 │   │   ├── middleware/
 │   │   │   └── auth.go              # JWT RequireAuth / RequireAdmin
 │   │   ├── model/
 │   │   │   ├── user.go
 │   │   │   ├── phone.go
-│   │   │   └── cart.go
+│   │   │   ├── cart.go
+│   │   │   └── order.go
 │   │   ├── repository/
 │   │   │   ├── user_repository.go   # Repository interfaces + in-memory implementations
 │   │   │   ├── phone_repository.go
 │   │   │   ├── cart_repository.go
+│   │   │   ├── order_repository.go
 │   │   │   └── postgres/            # PostgreSQL implementations
 │   │   │       ├── user_repository.go
 │   │   │       ├── phone_repository.go
-│   │   │       └── cart_repository.go
+│   │   │       ├── cart_repository.go
+│   │   │       └── order_repository.go
 │   │   ├── router/
 │   │   │   └── router.go            # Route registration
 │   │   └── service/
 │   │       ├── auth_service.go
 │   │       ├── phone_service.go
-│   │       └── cart_service.go
+│   │       ├── cart_service.go
+│   │       ├── payment_service.go
+│   │       └── order_service.go
 │   ├── migrations/
 │   │   └── 001_init.sql             # Schema (applied automatically on first Docker startup)
 │   ├── Dockerfile
@@ -115,7 +122,10 @@ CS464-g1t10-project/
     │       ├── PhoneDetail.jsx      # Single phone + add to cart
     │       ├── Login.jsx
     │       ├── Register.jsx
-    │       ├── Cart.jsx             # Cart management + checkout
+    │       ├── Cart.jsx             # Cart management
+    │       ├── Checkout.jsx         # Payment and checkout
+    │       ├── Orders.jsx           # Order history
+    │       ├── OrderDetail.jsx      # Order details
     │       └── Admin.jsx            # Admin CRUD panel
     └── package.json
 ```
@@ -151,6 +161,7 @@ The schema is applied automatically on first Docker startup via `backend/migrati
 | `price`       | NUMERIC(10,2) | Required  |
 | `stock`       | INT           | Default 0 |
 | `description` | TEXT          |           |
+| `image_url`   | TEXT          |           |
 
 ### `carts`
 
@@ -169,6 +180,27 @@ The schema is applied automatically on first Docker startup via `backend/migrati
 | `phone_id` | INT FK        | References `phones(id)`                      |
 | `quantity` | INT           | Required                                       |
 | `price`    | NUMERIC(10,2) | Price at time of add                           |
+
+### `orders`
+
+| Column      | Type           | Notes                     |
+| ----------- | -------------- | ------------------------- |
+| `id`      | TEXT PK        | Stripe payment intent ID  |
+| `user_id` | INT FK         | References `users(id)`  |
+| `status`  | VARCHAR(20)    | Default `'succeeded'`  |
+| `total`   | NUMERIC(10,2)  | Order total               |
+| `created_at` | TIMESTAMP   | Order creation time       |
+
+### `order_items`
+
+| Column       | Type          | Notes                        |
+| ------------ | ------------- | ---------------------------- |
+| `id`       | SERIAL PK     |                              |
+| `order_id` | TEXT FK       | References `orders(id)`    |
+| `phone_id` | INT FK        | References `phones(id)`    |
+| `phone_name` | TEXT        | Phone model at time of order |
+| `quantity` | INT           | Required                     |
+| `price`    | NUMERIC(10,2) | Price at time of order      |
 
 ---
 
@@ -258,7 +290,6 @@ All cart routes require authentication.
 | GET    | `/cart`          | Authenticated | Get current user's cart            |
 | POST   | `/cart`          | Authenticated | Add item to cart                   |
 | DELETE | `/cart/{itemId}` | Authenticated | Remove item from cart              |
-| POST   | `/cart/checkout` | Authenticated | Checkout the cart — deducts stock |
 
 **GET `/cart`**
 
@@ -281,6 +312,23 @@ All cart routes require authentication.
 { "phone_id": 1, "quantity": 1 }
 // Response 201 — cart item object
 ```
+
+---
+
+### Payment
+
+| Method | Path | Auth          | Description                     |
+| ------ | ---- | ------------- | ------------------------------- |
+| POST   | `/pay` | Authenticated | Process Stripe payment for cart |
+
+---
+
+### Orders
+
+| Method | Path              | Auth          | Description               |
+| ------ | ----------------- | ------------- | ------------------------- |
+| GET    | `/orders`       | Authenticated | List user's order history |
+| GET    | `/orders/{id}`   | Authenticated | Get order details by ID   |
 
 ---
 
@@ -428,7 +476,8 @@ The frontend stores the token in `localStorage` and automatically attaches it to
   - View phone details, stock availability, and description
   - Add phones to cart
   - Remove individual items from cart
-  - Checkout cart — stock deduction and validation happen inside a single database transaction with row-level locks, preventing overselling under concurrent load
+  - Checkout cart with Stripe payment integration
+  - View order history and order details
 - **Admin**
 
   - All customer features
@@ -442,6 +491,7 @@ The frontend stores the token in `localStorage` and automatically attaches it to
   - Responsive UI with dark-mode CSS variables
   - Fully containerised backend and database with Docker
   - Race-condition safe cart - adding to cart uses SELECT FOR UPDATE to prevent two users claiming the last unit simultaneously
+  - Stock deduction only after successful payment via Stripe
 
 ---
 
