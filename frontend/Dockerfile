@@ -18,14 +18,8 @@ FROM nginx:alpine
 # Copy built files to nginx html directory
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy nginx config to templates for env substitution
-COPY nginx.conf /etc/nginx/templates/default.conf.template
-
-# Create startup script that substitutes environment variables
-RUN echo '#!/bin/sh' > /docker-entrypoint.d/99-envsubst.sh && \
-    echo 'export BACKEND_URL' >> /docker-entrypoint.d/99-envsubst.sh && \
-    echo 'envsubst < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf' >> /docker-entrypoint.d/99-envsubst.sh && \
-    chmod +x /docker-entrypoint.d/99-envsubst.sh
+# Copy nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 8080
 
