@@ -18,8 +18,8 @@ FROM nginx:alpine
 # Copy built files to nginx html directory
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx config with env variables to templates
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 EXPOSE 8080
 
