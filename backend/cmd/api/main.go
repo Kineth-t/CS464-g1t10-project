@@ -102,7 +102,7 @@ func initRedis() *redis.Client {
 
     opts, err := redis.ParseURL(url)
     if err != nil {
-        log.Printf("Invalid Redis URL: %v", err)
+        log.Println("Invalid Redis URL: %v", err)
 		opts = &redis.Options{Addr: "redis:6379"}
     }
 
@@ -122,7 +122,7 @@ func initRedis() *redis.Client {
 
     // Check if Redis is alive [cite: 388]
     if err := rdb.Ping(context.Background()).Err(); err != nil {
-        log.Printf("Redis unreachable: %v", err)
+        log.Printnln("Redis unreachable: %v", err)
     }
     
     log.Println("Connected to Redis")
