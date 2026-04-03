@@ -19,6 +19,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
@@ -76,12 +77,20 @@ func main() {
 
 	r := router.Setup(ph, ah, ch, pyh, oh, rdb)
 
+	server := &http.Server{
+		Addr:         ":8080",
+		Handler:      r,                // Your router
+		ReadTimeout:  5 * time.Second,  // Max time to read the request
+		WriteTimeout: 10 * time.Second, // Max time to write the response
+		IdleTimeout:  120 * time.Second, // Max time to keep idle connections alive
+	}
+
 	log.Println("----------------------------------------")
 	log.Println("  Ringr Mobile API")
 	log.Println("  http://localhost:8080")
 	log.Println("  Swagger UI: http://localhost:8080/swagger/index.html")
 	log.Println("----------------------------------------")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Fatal(server.ListenAndServe())
 }
 
 func initRedis() *redis.Client {
@@ -95,6 +104,9 @@ func initRedis() *redis.Client {
     if err != nil {
         log.Fatalf("Invalid Redis URL: %v", err)
     }
+
+	opts.PoolSize = 100
+	opts.MinIdleConns = 10
 
     rdb := redis.NewClient(opts)
 
