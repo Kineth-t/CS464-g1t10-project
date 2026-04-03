@@ -74,7 +74,7 @@ func main() {
 	pyh := handler.NewPaymentHandler(paymentSvc)
 	oh := handler.NewOrderHandler(orderSvc)
 
-	r := router.Setup(ph, ah, ch, pyh, oh)
+	r := router.Setup(ph, ah, ch, pyh, oh, rdb)
 
 	log.Println("----------------------------------------")
 	log.Println("  Ringr Mobile API")
