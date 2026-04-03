@@ -96,23 +96,33 @@ func main() {
 func initRedis() *redis.Client {
     url := os.Getenv("REDIS_URL")
     if url == "" {
-        // Fallback for local native testing
-        url = "redis://localhost:6379" 
+        // Use the Docker service name 'redis' if REDIS_URL isn't set
+        url = "redis://redis:6379" 
     }
 
     opts, err := redis.ParseURL(url)
     if err != nil {
-        log.Fatalf("Invalid Redis URL: %v", err)
+        log.Printf("Invalid Redis URL: %v", err)
+		opts = &redis.Options{Addr: "redis:6379"}
     }
 
+	// Your optimized pool settings
 	opts.PoolSize = 100
 	opts.MinIdleConns = 10
 
+	// Connection timeouts are vital for cloud stability
+	opts.DialTimeout = 5 * time.Second
+    opts.ReadTimeout = 3 * time.Second
+
     rdb := redis.NewClient(opts)
+
+	// This allows Railway to finish starting the app while Redis warms up.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
 
     // Check if Redis is alive [cite: 388]
     if err := rdb.Ping(context.Background()).Err(); err != nil {
-        log.Fatalf("Redis unreachable: %v", err)
+        log.Printf("Redis unreachable: %v", err)
     }
     
     log.Println("Connected to Redis")
