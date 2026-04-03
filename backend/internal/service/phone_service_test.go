@@ -46,7 +46,10 @@ func TestCreatePhone_Success(t *testing.T) {
 
 func TestListPhones_Empty(t *testing.T) {
 	svc := NewPhoneService(newMockPhoneRepo())
-	phones := svc.ListPhones()
+	phones, err := svc.GetAll()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if len(phones) != 0 {
 		t.Errorf("expected 0 phones, got %d", len(phones))
 	}
@@ -57,7 +60,10 @@ func TestListPhones_ReturnsAll(t *testing.T) {
 	repo.Create(model.Phone{Brand: "Apple", Price: 999, Stock: 10})
 	repo.Create(model.Phone{Brand: "Samsung", Price: 799, Stock: 5})
 	svc := NewPhoneService(repo)
-	phones := svc.ListPhones()
+	phones, err := svc.GetAll()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if len(phones) != 2 {
 		t.Errorf("expected 2 phones, got %d", len(phones))
 	}

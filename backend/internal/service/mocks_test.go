@@ -46,12 +46,12 @@ func newMockPhoneRepo() *mockPhoneRepo {
 	return &mockPhoneRepo{phones: make(map[int]model.Phone), nextID: 1}
 }
 
-func (m *mockPhoneRepo) GetAll() []model.Phone {
+func (m *mockPhoneRepo) GetAll() ([]model.Phone, error) {
 	out := make([]model.Phone, 0, len(m.phones))
 	for _, p := range m.phones {
 		out = append(out, p)
 	}
-	return out
+	return out, nil
 }
 
 func (m *mockPhoneRepo) GetByID(id int) (model.Phone, error) {
@@ -60,6 +60,27 @@ func (m *mockPhoneRepo) GetByID(id int) (model.Phone, error) {
 		return model.Phone{}, errors.New("phone not found")
 	}
 	return p, nil
+}
+
+func (m *mockPhoneRepo) CheckStockAndReserve(phoneID, quantity int) (float64, error) {
+	p, ok := m.phones[phoneID]
+	if !ok {
+		return 0, errors.New("phone not found")
+	}
+	if p.Stock < quantity {
+		return 0, errors.New("insufficient stock")
+	}
+	// Reserve stock (in mock, just subtract)
+	m.phones[phoneID] = model.Phone{
+		ID:          p.ID,
+		Brand:       p.Brand,
+		Model:       p.Model,
+		Price:       p.Price,
+		Stock:       p.Stock - quantity,
+		Description: p.Description,
+		ImageURL:    p.ImageURL,
+	}
+	return p.Price, nil
 }
 
 func (m *mockPhoneRepo) Create(p model.Phone) model.Phone {
@@ -143,13 +164,19 @@ func (m *mockCartRepo) RemoveItem(itemID, cartID int) error {
 	return nil
 }
 
-func (m *mockCartRepo) CheckoutCart(cartID int) error {
+func (m *mockCartRepo) CheckoutCart(cartID int, items []model.CartItem) error {
 	cart, ok := m.carts[cartID]
 	if !ok {
 		return errors.New("cart not found")
 	}
 	cart.Status = "checked_out"
 	m.carts[cartID] = cart
+	// Clear items
+	for i := range m.items {
+		if m.items[i].CartID == cartID {
+			delete(m.items, i)
+		}
+	}
 	return nil
 }
 
