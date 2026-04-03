@@ -15,8 +15,11 @@ export default function Home() {
 
   useEffect(() => {
     phonesAPI.list()
-      .then(setPhones)
-      .catch((e) => setError(e.message))
+      .then((data) => setPhones(Array.isArray(data) ? data : []))
+      .catch((e) => {
+        console.error('Failed to load phones:', e);
+        setError(e.message);
+      })
       .finally(() => setLoading(false));
   }, []);
 
