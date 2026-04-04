@@ -4,12 +4,6 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
-    # DNS resolver is injected at container startup from /etc/resolv.conf
-    # so it works on Railway (Tailscale DNS) and Docker alike.
-    # ipv6=off: Go's ":8080" binds IPv4-only; Railway's private DNS also
-    # returns IPv6 addresses that would always time out.
-    resolver ${RESOLVER} valid=10s ipv6=off;
-
     # Gzip compression
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
@@ -22,8 +16,7 @@ server {
 
     # Health check proxy - exposes backend /health publicly via the frontend domain
     location /health {
-        set $backend "${BACKEND_URL}";
-        proxy_pass http://$backend;
+        proxy_pass http://${BACKEND_URL}/health;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -32,13 +25,8 @@ server {
     }
 
     # API proxy - forwards to backend via Railway private network (strips /api prefix)
-    # IMPORTANT: set $backend BEFORE rewrite — break stops all subsequent
-    # rewrite-phase directives (including set), so the variable must be
-    # assigned first or it will be uninitialized when proxy_pass runs.
     location /api/ {
-        set $backend "${BACKEND_URL}";
-        rewrite ^/api/(.*) /$1 break;
-        proxy_pass http://$backend;
+        proxy_pass http://${BACKEND_URL}/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
