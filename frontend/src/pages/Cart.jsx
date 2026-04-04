@@ -14,7 +14,6 @@ export default function Cart() {
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState(null);
   const [removingId, setRemovingId] = useState(null);
-  const [checkingOut, setCheckingOut] = useState(false);
 
   function loadCart() {
     return cartAPI.get()

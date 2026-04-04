@@ -11,11 +11,6 @@ import { ArrowLeft, CreditCard, Lock, CheckCircle, AlertCircle, Download } from 
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function generateOrderId() {
-  return 'ORD-' + Date.now().toString(36).toUpperCase() + '-' +
-    Math.random().toString(36).slice(2, 6).toUpperCase();
-}
-
 function buildReceiptHTML({ orderId, orderDate, items, total, cardHolder }) {
   const rows = items.map(item => `
     <tr>
@@ -182,13 +177,13 @@ export default function Checkout() {
       .then(setCart)
       .catch(() => navigate('/cart'))
       .finally(() => setLoadingCart(false));
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     if (!loadingCart && (!cart || !cart.items || cart.items.length === 0)) {
       navigate('/cart');
     }
-  }, [loadingCart, cart]);
+  }, [loadingCart, cart, navigate]);
 
   function handleChange(e) {
     const { name, value } = e.target;
