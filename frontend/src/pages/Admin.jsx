@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { phonesAPI } from '../api/client';
+import { useEffect, useRef, useState } from 'react';
+import { phonesAPI, uploadAPI } from '../api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { PlusCircle, Pencil, Trash2, CheckCircle, AlertCircle, X } from 'lucide-react';
 
-const EMPTY_FORM = { brand: '', model: '', price: '', stock: '', description: '' };
+const EMPTY_FORM = { brand: '', model: '', price: '', stock: '', description: '', image_url: '' };
 
 export default function Admin() {
   const [phones, setPhones] = useState([]);
@@ -18,6 +18,9 @@ export default function Admin() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const fileInputRef = useRef(null);
 
   function loadPhones() {
     return phonesAPI.list()
@@ -32,15 +35,35 @@ export default function Admin() {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   }
 
+  function handleImageChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
+
+  function clearImage() {
+    setImageFile(null);
+    setImagePreview('');
+    setForm((f) => ({ ...f, image_url: '' }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
   function startEdit(phone) {
     setEditingId(phone.id);
-    setForm({ brand: phone.brand, model: phone.model, price: String(phone.price), stock: String(phone.stock), description: phone.description || '' });
+    setForm({ brand: phone.brand, model: phone.model, price: String(phone.price), stock: String(phone.stock), description: phone.description || '', image_url: phone.image_url || '' });
+    setImageFile(null);
+    setImagePreview(phone.image_url || '');
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setFeedback(null);
   }
 
   function cancelEdit() {
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setImageFile(null);
+    setImagePreview('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setFeedback(null);
   }
 
@@ -48,8 +71,24 @@ export default function Admin() {
     e.preventDefault();
     setFeedback(null);
     setSubmitting(true);
-    const payload = { brand: form.brand, model: form.model, price: parseFloat(form.price), stock: parseInt(form.stock, 10), description: form.description };
     try {
+      let imageUrl = form.image_url;
+
+      // If a new file was selected, upload it first
+      if (imageFile) {
+        const result = await uploadAPI.upload(imageFile);
+        imageUrl = result.url;
+      }
+
+      const payload = {
+        brand: form.brand,
+        model: form.model,
+        price: parseFloat(form.price),
+        stock: parseInt(form.stock, 10),
+        description: form.description,
+        image_url: imageUrl,
+      };
+
       if (editingId) {
         await phonesAPI.update(editingId, payload);
         setFeedback({ ok: true, msg: 'Phone updated.' });
@@ -113,6 +152,37 @@ export default function Admin() {
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Input id="description" name="description" value={form.description} onChange={handleChange} placeholder="Optional" />
+            </div>
+            <div className="space-y-2">
+              <Label>Product Image</Label>
+              <div className="flex items-start gap-4">
+                {imagePreview && (
+                  <div className="relative shrink-0">
+                    <img src={imagePreview} alt="Preview" className="h-20 w-20 rounded-md object-cover border" />
+                    <button type="button" onClick={clearImage} className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center text-xs leading-none">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+                <div className="flex-1 space-y-1.5">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="block w-full text-sm text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/80 cursor-pointer"
+                  />
+                  <p className="text-xs text-muted-foreground">Upload a new image, or paste a URL below</p>
+                  <Input
+                    id="image_url"
+                    name="image_url"
+                    value={imageFile ? '' : form.image_url}
+                    onChange={(e) => { setImageFile(null); setImagePreview(e.target.value); setForm((f) => ({ ...f, image_url: e.target.value })); }}
+                    placeholder="https://example.com/image.jpg"
+                    disabled={!!imageFile}
+                  />
+                </div>
+              </div>
             </div>
             <div className="flex gap-2">
               <Button type="submit" disabled={submitting}>

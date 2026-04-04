@@ -52,6 +52,25 @@ export const cartAPI = {
   checkout: () => request('/cart/checkout', { method: 'POST' }),
 };
 
+// Image upload (admin only)
+export const uploadAPI = {
+  upload: async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${BASE_URL}/upload`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch { data = { error: text }; }
+    if (!res.ok) throw new Error(data?.error || `Upload failed (${res.status})`);
+    return data; // { url: "https://res.cloudinary.com/..." }
+  },
+};
+
 // Checkout payment
 export const paymentAPI = {
   pay: ({ payment_method_id }) =>

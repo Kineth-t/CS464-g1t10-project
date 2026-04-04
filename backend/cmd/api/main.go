@@ -77,8 +77,9 @@ func main() {
 	pyh := handler.NewPaymentHandler(paymentSvc)
 	oh := handler.NewOrderHandler(orderSvc)
 	hh := handler.NewHealthHandler(db, rdb)
+	uh := handler.NewUploadHandler()
 
-	r := router.Setup(ph, ah, ch, pyh, oh, hh, rdb)
+	r := router.Setup(ph, ah, ch, pyh, oh, hh, uh, rdb)
 
 	server := &http.Server{
 		Addr:         ":8080",
