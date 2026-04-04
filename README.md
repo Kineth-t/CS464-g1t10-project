@@ -60,6 +60,8 @@ The frontend uses **React Context** for global auth state and a thin **API clien
 
 ```
 CS464-g1t10-project/
+├── tests/
+│   └── load_test.js             # k6 load & rate-limit tests
 ├── backend/
 │   ├── cmd/api/
 │   │   └── main.go                  # Entry point; seeds admin on startup
@@ -492,6 +494,51 @@ The frontend stores the token in `localStorage` and automatically attaches it to
   - Fully containerised backend and database with Docker
   - Race-condition safe cart - adding to cart uses SELECT FOR UPDATE to prevent two users claiming the last unit simultaneously
   - Stock deduction only after successful payment via Stripe
+
+---
+
+## Load Testing
+
+[k6](https://k6.io) load tests live in `tests/load_test.js`. They cover two scenarios:
+
+| Scenario | Endpoint | What it proves |
+|---|---|---|
+| Phone listing | `GET /phones` | Public catalog is reachable and returns a valid JSON array |
+| Login throttle | `POST /auth/login` (wrong password) | Per-user rate limiter fires 429 after 5 failed attempts/min |
+
+### Install k6
+
+```bash
+# Windows
+winget install k6
+
+# macOS
+brew install k6
+```
+
+### Run locally (against docker-compose)
+
+Start the backend first (`docker compose up -d` in `backend/`), then:
+
+```bash
+k6 run tests/load_test.js
+```
+
+### Run against the deployed Railway app
+
+```bash
+k6 run -e BASE_URL=https://ringr.up.railway.app/api tests/load_test.js
+```
+
+### Staged stress test (rate-limit demo)
+
+To demonstrate the sliding-window throttle kicking in with `429 Too Many Requests`, swap the `options` block in `tests/load_test.js` — uncomment **Option 2** and comment out **Option 1**, then re-run:
+
+```bash
+k6 run -e BASE_URL=https://ringr.up.railway.app/api tests/load_test.js
+```
+
+The test ramps up to 1 000 virtual users over ~2 minutes. You will see 429 responses once the global (500 req/min) and per-user (5 login attempts/min) throttles are breached.
 
 ---
 
