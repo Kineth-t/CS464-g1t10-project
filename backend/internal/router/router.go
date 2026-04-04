@@ -11,7 +11,7 @@ import (
 )
 
 // Setup initializes all routes and returns the main HTTP handler
-func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHandler, pyh *handler.PaymentHandler, oh *handler.OrderHandler, rdb *redis.Client) http.Handler {
+func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHandler, pyh *handler.PaymentHandler, oh *handler.OrderHandler, hh *handler.HealthHandler, rdb *redis.Client) http.Handler {
 	mux := http.NewServeMux() // Main router
 
 	// Read allowed origin from env (set to the frontend public URL in production)
@@ -206,6 +206,15 @@ globalPaymentThrottle := middleware.SlidingWindowThrottle(rdb, 10, 60*time.Secon
 		// Get a single order by Stripe payment intent ID
 		oh.GetOrder(w, r)
 	})))
+
+	// Health check (public — used by Railway and monitoring tools)
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		hh.Health(w, r)
+	})
 
 	// Swagger UI
 	mux.Handle("/swagger/", httpSwagger.WrapHandler)
