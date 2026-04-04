@@ -4,6 +4,12 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # Re-resolve backend hostname on every request so IP changes after a
+    # Railway redeploy are picked up immediately.
+    # ipv6=off: Go's ":8080" binds IPv4-only; Railway also returns an IPv6
+    # address for backend.railway.internal which would always time out.
+    resolver 127.0.0.11 valid=10s ipv6=off;
+
     # Gzip compression
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
@@ -16,7 +22,8 @@ server {
 
     # Health check proxy - exposes backend /health publicly via the frontend domain
     location /health {
-        proxy_pass http://${BACKEND_URL}/health;
+        set $backend "${BACKEND_URL}";
+        proxy_pass http://$backend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -26,7 +33,9 @@ server {
 
     # API proxy - forwards to backend via Railway private network (strips /api prefix)
     location /api/ {
-        proxy_pass http://${BACKEND_URL}/;
+        rewrite ^/api/(.*) /$1 break;
+        set $backend "${BACKEND_URL}";
+        proxy_pass http://$backend;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
