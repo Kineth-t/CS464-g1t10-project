@@ -45,9 +45,11 @@ func main() {
 	}
 	log.Println("Connected to database")
 
-	//Call your helper to get the Redis client
+	// Call your helper to get the Redis client
 	rdb := initRedis()
-	defer rdb.Close()
+	if rdb != nil {
+		defer rdb.Close()
+	}
 
 	// Repos
 	phoneRepo := pg.NewPhoneRepository(db)
@@ -79,10 +81,10 @@ func main() {
 
 	server := &http.Server{
 		Addr:         ":8080",
-		Handler:      r,                 // Your router
-		ReadTimeout:  5 * time.Second,   // Max time to read the request
-		WriteTimeout: 10 * time.Second,  // Max time to write the response
-		IdleTimeout:  120 * time.Second, // Max time to keep idle connections alive
+		Handler:      r,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
 	}
 
 	log.Println("----------------------------------------")
@@ -96,43 +98,41 @@ func main() {
 func initRedis() *redis.Client {
 	url := os.Getenv("REDIS_URL")
 	if url == "" {
-		// Use the Docker service name 'redis' if REDIS_URL isn't set
-		url = "redis://redis:6379"
+		log.Println("Redis not configured, caching disabled")
+		return nil
 	}
 
 	opts, err := redis.ParseURL(url)
 	if err != nil {
-		log.Println("Invalid Redis URL: %v", err)
-		opts = &redis.Options{Addr: "redis:6379"}
+		log.Printf("Invalid Redis URL: %v", err)
+		log.Println("Redis disabled")
+		return nil
 	}
 
-	// Your optimized pool settings
 	opts.PoolSize = 100
 	opts.MinIdleConns = 10
-
-	// Connection timeouts are vital for cloud stability
 	opts.DialTimeout = 5 * time.Second
 	opts.ReadTimeout = 3 * time.Second
 
 	rdb := redis.NewClient(opts)
 
-	// This allows Railway to finish starting the app while Redis warms up.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Check if Redis is alive
 	if err := rdb.Ping(ctx).Err(); err != nil {
 		log.Printf("Redis unreachable: %v", err)
-	} else {
-		log.Println("Connected to Redis")
+		log.Println("Redis disabled")
+		return nil
 	}
+
+	log.Println("Connected to Redis")
 	return rdb
 }
 
 func seedAdmin(repo *pg.UserRepository) {
 	_, err := repo.FindByUsername("admin")
 	if err == nil {
-		return // already exists
+		return
 	}
 	hash, _ := bcrypt.GenerateFromPassword([]byte(os.Getenv("ADMIN_PASSWORD")), bcrypt.DefaultCost)
 	_, err = repo.Create(model.User{

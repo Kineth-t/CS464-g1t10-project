@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 
 	"github.com/Kineth-t/CS464-g1t10-project/internal/model"
@@ -103,6 +104,34 @@ func (m *mockPhoneRepo) Delete(id int) error {
 		return errors.New("phone not found")
 	}
 	delete(m.phones, id)
+	return nil
+}
+
+// --- mockPhoneCache (for tests) ---
+
+type mockPhoneCache struct{}
+
+func newMockPhoneCache() *mockPhoneCache {
+	return &mockPhoneCache{}
+}
+
+func (m *mockPhoneCache) GetList(ctx context.Context) ([]model.Phone, error) {
+	return nil, nil
+}
+
+func (m *mockPhoneCache) SetList(ctx context.Context, phones []model.Phone) error {
+	return nil
+}
+
+func (m *mockPhoneCache) Get(ctx context.Context, id int) (model.Phone, error) {
+	return model.Phone{}, nil
+}
+
+func (m *mockPhoneCache) Set(ctx context.Context, phone model.Phone) error {
+	return nil
+}
+
+func (m *mockPhoneCache) Delete(ctx context.Context, id int) error {
 	return nil
 }
 

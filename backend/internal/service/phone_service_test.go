@@ -4,10 +4,11 @@ import (
 	"testing"
 
 	"github.com/Kineth-t/CS464-g1t10-project/internal/model"
+	"github.com/Kineth-t/CS464-g1t10-project/internal/repository"
 )
 
 func TestCreatePhone_ZeroPrice(t *testing.T) {
-	svc := NewPhoneService(newMockPhoneRepo())
+	svc := NewPhoneService(newMockPhoneRepo(), repository.NewPhoneCache(nil))
 	_, err := svc.CreatePhone(model.Phone{Brand: "Apple", Model: "iPhone 15", Price: 0, Stock: 10})
 	if err == nil {
 		t.Fatal("expected error for zero price")
@@ -15,7 +16,7 @@ func TestCreatePhone_ZeroPrice(t *testing.T) {
 }
 
 func TestCreatePhone_NegativePrice(t *testing.T) {
-	svc := NewPhoneService(newMockPhoneRepo())
+	svc := NewPhoneService(newMockPhoneRepo(), repository.NewPhoneCache(nil))
 	_, err := svc.CreatePhone(model.Phone{Brand: "Apple", Model: "iPhone 15", Price: -100, Stock: 10})
 	if err == nil {
 		t.Fatal("expected error for negative price")
@@ -23,7 +24,7 @@ func TestCreatePhone_NegativePrice(t *testing.T) {
 }
 
 func TestCreatePhone_NegativeStock(t *testing.T) {
-	svc := NewPhoneService(newMockPhoneRepo())
+	svc := NewPhoneService(newMockPhoneRepo(), repository.NewPhoneCache(nil))
 	_, err := svc.CreatePhone(model.Phone{Brand: "Apple", Model: "iPhone 15", Price: 999, Stock: -1})
 	if err == nil {
 		t.Fatal("expected error for negative stock")
@@ -31,7 +32,7 @@ func TestCreatePhone_NegativeStock(t *testing.T) {
 }
 
 func TestCreatePhone_Success(t *testing.T) {
-	svc := NewPhoneService(newMockPhoneRepo())
+	svc := NewPhoneService(newMockPhoneRepo(), repository.NewPhoneCache(nil))
 	phone, err := svc.CreatePhone(model.Phone{Brand: "Samsung", Model: "Galaxy S24", Price: 799.99, Stock: 50})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -45,7 +46,7 @@ func TestCreatePhone_Success(t *testing.T) {
 }
 
 func TestListPhones_Empty(t *testing.T) {
-	svc := NewPhoneService(newMockPhoneRepo())
+	svc := NewPhoneService(newMockPhoneRepo(), repository.NewPhoneCache(nil))
 	phones, err := svc.GetAll()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -59,7 +60,7 @@ func TestListPhones_ReturnsAll(t *testing.T) {
 	repo := newMockPhoneRepo()
 	repo.Create(model.Phone{Brand: "Apple", Price: 999, Stock: 10})
 	repo.Create(model.Phone{Brand: "Samsung", Price: 799, Stock: 5})
-	svc := NewPhoneService(repo)
+	svc := NewPhoneService(repo, repository.NewPhoneCache(nil))
 	phones, err := svc.GetAll()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -70,7 +71,7 @@ func TestListPhones_ReturnsAll(t *testing.T) {
 }
 
 func TestGetPhone_NotFound(t *testing.T) {
-	svc := NewPhoneService(newMockPhoneRepo())
+	svc := NewPhoneService(newMockPhoneRepo(), repository.NewPhoneCache(nil))
 	_, err := svc.GetPhone(999)
 	if err == nil {
 		t.Fatal("expected error for non-existent phone ID")
@@ -80,7 +81,7 @@ func TestGetPhone_NotFound(t *testing.T) {
 func TestGetPhone_Found(t *testing.T) {
 	repo := newMockPhoneRepo()
 	created := repo.Create(model.Phone{Brand: "Apple", Model: "iPhone 15", Price: 999, Stock: 10})
-	svc := NewPhoneService(repo)
+	svc := NewPhoneService(repo, repository.NewPhoneCache(nil))
 
 	phone, err := svc.GetPhone(created.ID)
 	if err != nil {
@@ -92,7 +93,7 @@ func TestGetPhone_Found(t *testing.T) {
 }
 
 func TestDeletePhone_NotFound(t *testing.T) {
-	svc := NewPhoneService(newMockPhoneRepo())
+	svc := NewPhoneService(newMockPhoneRepo(), repository.NewPhoneCache(nil))
 	err := svc.DeletePhone(999)
 	if err == nil {
 		t.Fatal("expected error when deleting non-existent phone")
@@ -102,7 +103,7 @@ func TestDeletePhone_NotFound(t *testing.T) {
 func TestDeletePhone_Success(t *testing.T) {
 	repo := newMockPhoneRepo()
 	created := repo.Create(model.Phone{Brand: "Apple", Price: 999, Stock: 10})
-	svc := NewPhoneService(repo)
+	svc := NewPhoneService(repo, repository.NewPhoneCache(nil))
 
 	if err := svc.DeletePhone(created.ID); err != nil {
 		t.Fatalf("unexpected error: %v", err)
