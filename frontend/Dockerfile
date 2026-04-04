@@ -27,5 +27,9 @@ COPY nginx.conf.template /etc/nginx/conf.d/default.conf.template
 
 EXPOSE 8080
 
-# Substitute env vars into nginx config, then start nginx
-CMD ["/bin/sh", "-c", "envsubst '${BACKEND_URL}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+# Copy startup script that resolves BACKEND_URL to IPv4 before nginx starts,
+# and re-resolves every 30s so backend redeployments are handled automatically
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
+CMD ["/start.sh"]
