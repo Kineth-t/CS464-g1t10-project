@@ -4,11 +4,11 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
-    # Re-resolve backend hostname on every request so IP changes after a
-    # Railway redeploy are picked up immediately.
-    # ipv6=off: Go's ":8080" binds IPv4-only; Railway also returns an IPv6
-    # address for backend.railway.internal which would always time out.
-    resolver 127.0.0.11 valid=10s ipv6=off;
+    # DNS resolver is injected at container startup from /etc/resolv.conf
+    # so it works on Railway (Tailscale DNS) and Docker alike.
+    # ipv6=off: Go's ":8080" binds IPv4-only; Railway's private DNS also
+    # returns IPv6 addresses that would always time out.
+    resolver ${RESOLVER} valid=10s ipv6=off;
 
     # Gzip compression
     gzip on;
@@ -32,9 +32,12 @@ server {
     }
 
     # API proxy - forwards to backend via Railway private network (strips /api prefix)
+    # IMPORTANT: set $backend BEFORE rewrite — break stops all subsequent
+    # rewrite-phase directives (including set), so the variable must be
+    # assigned first or it will be uninitialized when proxy_pass runs.
     location /api/ {
-        rewrite ^/api/(.*) /$1 break;
         set $backend "${BACKEND_URL}";
+        rewrite ^/api/(.*) /$1 break;
         proxy_pass http://$backend;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
