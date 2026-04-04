@@ -38,21 +38,87 @@ A full-stack mobile phone e-commerce application built for CS464. Customers can 
 
 ## Architecture
 
-The backend follows a **layered architecture**:
+### Deployment Topology
 
-```
-HTTP Request
-    ↓
-Handler       (parses input, writes response)
-    ↓
-Service       (business logic, validation)
-    ↓
-Repository    (interface — abstracts DB)
-    ↓
-Postgres impl (pgx queries against PostgreSQL)
+```mermaid
+graph TD
+    Browser("🌐 Browser")
+
+    subgraph GitHub
+        Repo["Source Code\n(GitHub)"]
+        CI["GitHub Actions CI\ngo test · eslint · vite build"]
+    end
+
+    subgraph Railway["Railway (Production)"]
+        direction TB
+        FE["Frontend Service\nnginx + React SPA\nringr.up.railway.app\n(public HTTPS)"]
+        BE["Backend Service\nGo API :8080\n(private network only)"]
+        PG[("PostgreSQL\n(Railway managed)")]
+        RD[("Redis\n(Railway managed)")]
+    end
+
+    Stripe["Stripe API\n(external)"]
+
+    Browser -- "HTTPS" --> FE
+    FE -- "static files" --> Browser
+    FE -- "proxy /api/*\nbackend.railway.internal:8080" --> BE
+    BE -- "pgx/v5 SQL queries" --> PG
+    BE -- "cache · rate limiting" --> RD
+    BE -- "payment processing" --> Stripe
+    Repo -- "push to main\ntriggers redeploy" --> Railway
+    Repo --> CI
 ```
 
-The frontend uses **React Context** for global auth state and a thin **API client** (`src/api/client.js`) that proxies all requests to the backend through Vite's dev-server proxy.
+> The backend has **no public URL** — all browser traffic enters through nginx on the frontend service and is forwarded over Railway's private network.
+
+---
+
+### Backend Request Flow
+
+```mermaid
+flowchart TD
+    Req["Incoming HTTP Request"]
+
+    subgraph Middleware
+        CORS["CORS"]
+        RL["Rate Limiter\n(Redis sliding window)"]
+        Auth["JWT Auth\n(RequireAuth / RequireAdmin)"]
+    end
+
+    subgraph Handler["Handler Layer"]
+        H["Decode JSON\nValidate input\nWrite HTTP response"]
+    end
+
+    subgraph Service["Service Layer"]
+        S["Business logic\nValidation rules"]
+    end
+
+    subgraph Repository["Repository Layer"]
+        I["Interface\n(decouples DB from logic)"]
+        PG["postgres/ impl\npgx queries"]
+        Cache["PhoneCache\n(Redis — optional)"]
+    end
+
+    DB[("PostgreSQL")]
+
+    Req --> CORS --> RL --> Auth --> H --> S --> I
+    I --> Cache
+    I --> PG --> DB
+```
+
+---
+
+### Backend Layer Summary
+
+| Layer | Responsibility |
+|---|---|
+| **Handler** | Decode request, call service, write JSON response |
+| **Service** | Business rules, validation, orchestration |
+| **Repository (interface)** | Decouples business logic from storage |
+| **postgres/ impl** | pgx queries against PostgreSQL |
+| **PhoneCache** | Optional Redis cache; falls back gracefully if unavailable |
+
+The frontend uses **React Context** for global auth state and a thin **API client** (`src/api/client.js`) that proxies all requests through nginx in production (or Vite's dev-server proxy locally).
 
 ---
 
