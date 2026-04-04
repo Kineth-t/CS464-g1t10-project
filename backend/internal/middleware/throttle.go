@@ -31,6 +31,12 @@ func SlidingWindowThrottle(rdb *redis.Client, limit int, window time.Duration, c
 				key = "throttle:user:" + contextName + ":" + ip
 			}
 
+			// If Redis is not configured, skip rate limiting entirely
+			if rdb == nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			now := time.Now().UnixNano()
 			// Calculate the start of the window (e.g., 60 seconds ago)
 			threshold := now - window.Nanoseconds()
