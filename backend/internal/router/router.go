@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	"os"
 	"time"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"github.com/redis/go-redis/v9"
@@ -12,6 +13,13 @@ import (
 // Setup initializes all routes and returns the main HTTP handler
 func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHandler, pyh *handler.PaymentHandler, oh *handler.OrderHandler, rdb *redis.Client) http.Handler {
 	mux := http.NewServeMux() // Main router
+
+	// Read allowed origin from env (set to the frontend public URL in production)
+	allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
+	if allowedOrigin == "" {
+		allowedOrigin = "*"
+	}
+	cors := middleware.CORS(allowedOrigin)
 
 // (Global) - Max 500 total requests/min for the whole app
 globalSafety := middleware.SlidingWindowThrottle(rdb, 500, 60*time.Second, "api", true)
@@ -202,5 +210,5 @@ globalPaymentThrottle := middleware.SlidingWindowThrottle(rdb, 10, 60*time.Secon
 	// Swagger UI
 	mux.Handle("/swagger/", httpSwagger.WrapHandler)
 
-	return mux
+	return cors(mux)
 }
