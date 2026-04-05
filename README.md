@@ -105,6 +105,28 @@ flowchart TD
     I --> Cache
     I --> PG --> DB
 ```
+---
+
+### Cart Race Condition Prevention
+```mermaid
+sequenceDiagram
+    participant A as User A
+    participant B as User B
+    participant DB as PostgreSQL
+
+    A->>DB: SELECT FOR UPDATE (stock = 1)
+    B->>DB: SELECT FOR UPDATE (stock = 1)
+    Note over DB: User A gets lockUser B blocked, waiting
+
+    DB-->>A: Lock acquired, stock = 1
+    A->>A: Stock OK (1 ≥ 1)
+    A->>DB: INSERT cart item + COMMIT
+    Note over DB: Stock → 0, lock released
+
+    DB-->>B: Lock acquired, stock = 0
+    B->>B: Stock = 0, validation fails
+    B-->>B: Return out-of-stock error
+``` 
 
 ---
 
