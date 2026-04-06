@@ -146,20 +146,31 @@ func (r *PhoneRepository) Update(p model.Phone) error {
 	return nil
 }
 
-// Delete removes a phone by ID
+// Delete removes a phone by ID.
+// It first removes any cart_items that reference the phone so the FK constraint
+// does not block the deletion. order_items.phone_id is made nullable at startup
+// (ON DELETE SET NULL) so historical order records are preserved via phone_name.
 func (r *PhoneRepository) Delete(id int) error {
+	ctx := context.Background()
 
-	// Execute DELETE query
-	result, err := r.db.Exec(context.Background(),
-		`DELETE FROM phones WHERE id=$1`, id)
+	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback(ctx)
 
-	// If nothing deleted, phone not found
+	// Remove cart line-items for this phone before deleting it
+	if _, err := tx.Exec(ctx, `DELETE FROM cart_items WHERE phone_id = $1`, id); err != nil {
+		return err
+	}
+
+	result, err := tx.Exec(ctx, `DELETE FROM phones WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
 	if result.RowsAffected() == 0 {
 		return errors.New("phone not found")
 	}
 
-	return nil
+	return tx.Commit(ctx)
 }

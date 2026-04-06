@@ -53,6 +53,8 @@ func main() {
 
 	// Ensure audit_logs table exists (idempotent)
 	ensureAuditTable(db)
+	// Allow phones to be deleted even when they appear in order history
+	ensureOrderItemsNullablePhone(db)
 
 	// Repos
 	phoneRepo := pg.NewPhoneRepository(db)
@@ -141,6 +143,27 @@ func initRedis() *redis.Client {
 
 	log.Println("Connected to Redis")
 	return rdb
+}
+
+// ensureOrderItemsNullablePhone makes order_items.phone_id nullable with
+// ON DELETE SET NULL so that deleting a phone doesn't destroy order history.
+// The phone_name column already snapshots the product name at order time.
+func ensureOrderItemsNullablePhone(db *pgxpool.Pool) {
+	ctx := context.Background()
+	// Drop NOT NULL if still present
+	db.Exec(ctx, `ALTER TABLE order_items ALTER COLUMN phone_id DROP NOT NULL`)
+	// Re-create FK with SET NULL (drop first so it's idempotent across restarts)
+	db.Exec(ctx, `ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_phone_id_fkey`)
+	_, err := db.Exec(ctx, `
+		ALTER TABLE order_items
+		ADD CONSTRAINT order_items_phone_id_fkey
+		FOREIGN KEY (phone_id) REFERENCES phones(id) ON DELETE SET NULL
+	`)
+	if err != nil {
+		log.Printf("Warning: could not update order_items FK: %v", err)
+	} else {
+		log.Println("order_items phone FK updated (ON DELETE SET NULL)")
+	}
 }
 
 func ensureAuditTable(db *pgxpool.Pool) {
