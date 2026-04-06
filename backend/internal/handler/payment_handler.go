@@ -11,12 +11,16 @@ import (
 // PaymentHandler handles HTTP requests for payment processing
 type PaymentHandler struct {
 	service *service.PaymentService
+	audit   *service.AuditService
 }
 
 // Constructor
 func NewPaymentHandler(s *service.PaymentService) *PaymentHandler {
 	return &PaymentHandler{service: s}
 }
+
+// SetAudit attaches an audit service for event logging.
+func (h *PaymentHandler) SetAudit(s *service.AuditService) { h.audit = s }
 
 // Pay processes a Stripe payment for the user's active cart
 func (h *PaymentHandler) Pay(w http.ResponseWriter, r *http.Request) {
@@ -35,6 +39,11 @@ func (h *PaymentHandler) Pay(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	if h.audit != nil {
+		h.audit.Log(&userID, "payment.completed", "order", result.PaymentID, clientIP(r),
+			map[string]any{"order_id": result.PaymentID, "total": result.TotalAmount})
 	}
 
 	// Return the payment result

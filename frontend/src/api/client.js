@@ -52,6 +52,11 @@ export const cartAPI = {
   checkout: () => request('/cart/checkout', { method: 'POST' }),
 };
 
+// Audit logs (admin only)
+export const auditAPI = {
+  list: (limit = 100, offset = 0) => request(`/audit-logs?limit=${limit}&offset=${offset}`),
+};
+
 // Image upload (admin only)
 export const uploadAPI = {
   upload: async (file) => {

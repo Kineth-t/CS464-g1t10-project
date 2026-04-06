@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { phonesAPI, uploadAPI } from '../api/client';
+import { auditAPI, phonesAPI, uploadAPI } from '../api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { PlusCircle, Pencil, Trash2, CheckCircle, AlertCircle, X } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2, CheckCircle, AlertCircle, X, RefreshCw, ShieldAlert } from 'lucide-react';
 
 const EMPTY_FORM = { brand: '', model: '', price: '', stock: '', description: '', image_url: '' };
 
@@ -18,6 +18,9 @@ export default function Admin() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(true);
+  const [auditError, setAuditError] = useState('');
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const fileInputRef = useRef(null);
@@ -29,7 +32,16 @@ export default function Admin() {
       .finally(() => setLoading(false));
   }
 
-  useEffect(() => { loadPhones(); }, []);
+  function loadAuditLogs() {
+    setAuditLoading(true);
+    setAuditError('');
+    return auditAPI.list(100)
+      .then((data) => setAuditLogs(Array.isArray(data) ? data : []))
+      .catch((e) => setAuditError(e.message))
+      .finally(() => setAuditLoading(false));
+  }
+
+  useEffect(() => { loadPhones(); loadAuditLogs(); }, []);
 
   function handleChange(e) {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -233,6 +245,75 @@ export default function Admin() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ShieldAlert className="h-4 w-4" />
+              Audit Log
+              <Badge variant="secondary" className="ml-1">{auditLogs.length}</Badge>
+            </CardTitle>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={loadAuditLogs} disabled={auditLoading}>
+              <RefreshCw className={`h-3.5 w-3.5 ${auditLoading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {auditLoading ? (
+            <div className="p-6 space-y-2">
+              {[...Array(4)].map((_, i) => <div key={i} className="h-8 bg-muted rounded animate-pulse" />)}
+            </div>
+          ) : auditError ? (
+            <div className="p-6 text-destructive text-sm">{auditError}</div>
+          ) : auditLogs.length === 0 ? (
+            <div className="p-6 text-center text-muted-foreground text-sm">No audit events yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b bg-muted/40">
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">Time</th>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">Action</th>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">User</th>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">Resource</th>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">IP</th>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">Details</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {auditLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-muted/20">
+                      <td className="px-4 py-2 whitespace-nowrap text-muted-foreground">
+                        {new Date(log.created_at).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap">
+                        <span className={`inline-flex items-center rounded px-1.5 py-0.5 font-medium ${
+                          log.action.startsWith('phone.') ? 'bg-blue-50 text-blue-700' :
+                          log.action === 'user.login_failed' ? 'bg-red-50 text-red-700' :
+                          log.action.startsWith('user.') ? 'bg-green-50 text-green-700' :
+                          log.action.startsWith('cart.') ? 'bg-yellow-50 text-yellow-700' :
+                          log.action.startsWith('payment.') ? 'bg-purple-50 text-purple-700' :
+                          'bg-muted text-muted-foreground'
+                        }`}>
+                          {log.action}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-muted-foreground">{log.user_id ?? '—'}</td>
+                      <td className="px-4 py-2 text-muted-foreground">
+                        {log.resource_type ? `${log.resource_type}${log.resource_id ? ` #${log.resource_id}` : ''}` : '—'}
+                      </td>
+                      <td className="px-4 py-2 text-muted-foreground font-mono">{log.ip_address || '—'}</td>
+                      <td className="px-4 py-2 text-muted-foreground font-mono max-w-xs truncate">
+                        {log.details ? JSON.stringify(log.details) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>

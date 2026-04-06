@@ -6,6 +6,7 @@ import (
 	"strconv"        // Convert string → int
 	"strings"        // String manipulation
 
+	"github.com/Kineth-t/CS464-g1t10-project/internal/middleware"
 	"github.com/Kineth-t/CS464-g1t10-project/internal/model"
 	"github.com/Kineth-t/CS464-g1t10-project/internal/service"
 )
@@ -13,12 +14,16 @@ import (
 // PhoneHandler handles all phone/product-related HTTP requests
 type PhoneHandler struct {
 	service *service.PhoneService // Business logic layer
+	audit   *service.AuditService
 }
 
 // Constructor to create a new PhoneHandler
 func NewPhoneHandler(s *service.PhoneService) *PhoneHandler {
 	return &PhoneHandler{service: s}
 }
+
+// SetAudit attaches an audit service for event logging.
+func (h *PhoneHandler) SetAudit(s *service.AuditService) { h.audit = s }
 
 // ListPhones returns all phones
 //
@@ -97,6 +102,15 @@ func (h *PhoneHandler) CreatePhone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.audit != nil {
+		var uid *int
+		if v, ok := r.Context().Value(middleware.UserIDKey).(int); ok {
+			uid = &v
+		}
+		h.audit.Log(uid, "phone.created", "phone", strconv.Itoa(created.ID), clientIP(r),
+			map[string]any{"brand": created.Brand, "model": created.Model, "price": created.Price})
+	}
+
 	// Return 201 Created
 	w.WriteHeader(http.StatusCreated)
 
@@ -144,6 +158,15 @@ func (h *PhoneHandler) UpdatePhone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.audit != nil {
+		var uid *int
+		if v, ok := r.Context().Value(middleware.UserIDKey).(int); ok {
+			uid = &v
+		}
+		h.audit.Log(uid, "phone.updated", "phone", strconv.Itoa(p.ID), clientIP(r),
+			map[string]any{"brand": p.Brand, "model": p.Model, "price": p.Price})
+	}
+
 	// Return updated phone
 	json.NewEncoder(w).Encode(p)
 }
@@ -172,6 +195,15 @@ func (h *PhoneHandler) DeletePhone(w http.ResponseWriter, r *http.Request) {
 	if err := h.service.DeletePhone(id); err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
+	}
+
+	if h.audit != nil {
+		var uid *int
+		if v, ok := r.Context().Value(middleware.UserIDKey).(int); ok {
+			uid = &v
+		}
+		h.audit.Log(uid, "phone.deleted", "phone", strconv.Itoa(id), clientIP(r),
+			map[string]any{"phone_id": id})
 	}
 
 	// Return 204 No Content (successful deletion)

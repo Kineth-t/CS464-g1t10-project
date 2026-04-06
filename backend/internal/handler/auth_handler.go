@@ -11,12 +11,16 @@ import (
 // AuthHandler handles authentication-related HTTP requests (register, login)
 type AuthHandler struct {
 	service *service.AuthService // Reference to business logic layer
+	audit   *service.AuditService
 }
 
 // Constructor function to create a new AuthHandler
 func NewAuthHandler(s *service.AuthService) *AuthHandler {
 	return &AuthHandler{service: s}
 }
+
+// SetAudit attaches an audit service for event logging.
+func (h *AuthHandler) SetAudit(s *service.AuditService) { h.audit = s }
 
 // Register handles user registration requests
 //
@@ -57,6 +61,11 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.audit != nil {
+		h.audit.Log(&user.ID, "user.registered", "user", "", clientIP(r),
+			map[string]any{"username": user.Username})
+	}
+
 	// If successful, return HTTP 201 Created
 	w.WriteHeader(http.StatusCreated)
 
@@ -92,9 +101,18 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// Call service layer to authenticate user
 	token, err := h.service.Login(body.Username, body.Password)
 	if err != nil {
+		if h.audit != nil {
+			h.audit.Log(nil, "user.login_failed", "user", "", clientIP(r),
+				map[string]any{"username": body.Username})
+		}
 		// If authentication fails, return 401 Unauthorized
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
+	}
+
+	if h.audit != nil {
+		h.audit.Log(nil, "user.login", "user", "", clientIP(r),
+			map[string]any{"username": body.Username})
 	}
 
 	// Return the generated token as JSON

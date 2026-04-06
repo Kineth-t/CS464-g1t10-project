@@ -11,7 +11,7 @@ import (
 )
 
 // Setup initializes all routes and returns the main HTTP handler
-func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHandler, pyh *handler.PaymentHandler, oh *handler.OrderHandler, hh *handler.HealthHandler, uh *handler.UploadHandler, rdb *redis.Client) http.Handler {
+func Setup(ph *handler.PhoneHandler, ah *handler.AuthHandler, ch *handler.CartHandler, pyh *handler.PaymentHandler, oh *handler.OrderHandler, hh *handler.HealthHandler, uh *handler.UploadHandler, alh *handler.AuditHandler, rdb *redis.Client) http.Handler {
 	mux := http.NewServeMux() // Main router
 
 	// Read allowed origin from env (set to the frontend public URL in production)
@@ -205,6 +205,17 @@ globalPaymentThrottle := middleware.SlidingWindowThrottle(rdb, 10, 60*time.Secon
 		}
 		// Get a single order by Stripe payment intent ID
 		oh.GetOrder(w, r)
+	})))
+
+	// ========================
+	// Audit log route (ADMIN ONLY)
+	// ========================
+	mux.Handle("/audit-logs", middleware.RequireAdmin(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+			return
+		}
+		alh.List(w, r)
 	})))
 
 	// ========================

@@ -13,12 +13,16 @@ import (
 // CartHandler handles all cart-related HTTP requests
 type CartHandler struct {
 	service *service.CartService // Business logic layer for cart
+	audit   *service.AuditService
 }
 
 // Constructor to create a new CartHandler
 func NewCartHandler(s *service.CartService) *CartHandler {
 	return &CartHandler{service: s}
 }
+
+// SetAudit attaches an audit service for event logging.
+func (h *CartHandler) SetAudit(s *service.AuditService) { h.audit = s }
 
 // GetCart retrieves the current user's cart
 //
@@ -82,6 +86,11 @@ func (h *CartHandler) AddToCart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.audit != nil {
+		h.audit.Log(&userID, "cart.item_added", "cart", "", clientIP(r),
+			map[string]any{"phone_id": body.PhoneID, "quantity": body.Quantity})
+	}
+
 	// Return 201 Created since a new item is added
 	w.WriteHeader(http.StatusCreated)
 
@@ -119,6 +128,11 @@ func (h *CartHandler) RemoveFromCart(w http.ResponseWriter, r *http.Request) {
 		// If item not found or doesn't belong to user
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
+	}
+
+	if h.audit != nil {
+		h.audit.Log(&userID, "cart.item_removed", "cart", "", clientIP(r),
+			map[string]any{"item_id": itemID})
 	}
 
 	// Return 204 No Content (successful deletion, no response body)

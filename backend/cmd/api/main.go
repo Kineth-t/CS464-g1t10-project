@@ -51,11 +51,15 @@ func main() {
 		defer rdb.Close()
 	}
 
+	// Ensure audit_logs table exists (idempotent)
+	ensureAuditTable(db)
+
 	// Repos
 	phoneRepo := pg.NewPhoneRepository(db)
 	userRepo := pg.NewUserRepository(db)
 	cartRepo := pg.NewCartRepository(db)
 	orderRepo := pg.NewOrderRepository(db)
+	auditRepo := pg.NewAuditLogRepository(db)
 
 	// Cache
 	phoneCache := repository.NewPhoneCache(rdb)
@@ -66,6 +70,7 @@ func main() {
 	cartSvc := service.NewCartService(cartRepo, phoneRepo)
 	paymentSvc := service.NewPaymentService(cartRepo, phoneRepo, orderRepo)
 	orderSvc := service.NewOrderService(orderRepo)
+	auditSvc := service.NewAuditService(auditRepo)
 
 	// Seed admin if not exists
 	seedAdmin(userRepo)
@@ -78,8 +83,15 @@ func main() {
 	oh := handler.NewOrderHandler(orderSvc)
 	hh := handler.NewHealthHandler(db, rdb)
 	uh := handler.NewUploadHandler()
+	alh := handler.NewAuditHandler(auditSvc)
 
-	r := router.Setup(ph, ah, ch, pyh, oh, hh, uh, rdb)
+	// Attach audit service to handlers that log events
+	ph.SetAudit(auditSvc)
+	ah.SetAudit(auditSvc)
+	ch.SetAudit(auditSvc)
+	pyh.SetAudit(auditSvc)
+
+	r := router.Setup(ph, ah, ch, pyh, oh, hh, uh, alh, rdb)
 
 	server := &http.Server{
 		Addr:         ":8080",
@@ -129,6 +141,28 @@ func initRedis() *redis.Client {
 
 	log.Println("Connected to Redis")
 	return rdb
+}
+
+func ensureAuditTable(db *pgxpool.Pool) {
+	_, err := db.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS audit_logs (
+			id            SERIAL PRIMARY KEY,
+			user_id       INT REFERENCES users(id) ON DELETE SET NULL,
+			action        VARCHAR(64) NOT NULL,
+			resource_type VARCHAR(32),
+			resource_id   VARCHAR(64),
+			details       JSONB,
+			ip_address    VARCHAR(45),
+			created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		);
+		CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs (created_at DESC);
+		CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id    ON audit_logs (user_id);
+	`)
+	if err != nil {
+		log.Printf("Warning: could not ensure audit_logs table: %v", err)
+	} else {
+		log.Println("audit_logs table ready")
+	}
 }
 
 func seedAdmin(repo *pg.UserRepository) {
