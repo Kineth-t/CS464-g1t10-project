@@ -1,6 +1,6 @@
 # Ringr Mobile
 
-A full-stack mobile phone e-commerce application built for CS464. Customers can browse phones, manage a shopping cart, and checkout. Admins can manage the product catalog through a dedicated admin panel.
+A full-stack mobile phone e-commerce application built for CS464. Customers can browse phones, manage a shopping cart, and checkout with Stripe. Admins can manage the product catalog, upload product images, and monitor system activity via a live audit log.
 
 ---
 
@@ -26,8 +26,11 @@ A full-stack mobile phone e-commerce application built for CS464. Customers can 
 
 | Layer            | Technology                                      |
 | ---------------- | ----------------------------------------------- |
-| Backend          | Go 1.25 ·`net/http` · `golang-jwt/jwt v5` |
-| Database         | PostgreSQL 16 ·`pgx/v5` connection pool      |
+| Backend          | Go 1.25 · `net/http` · `golang-jwt/jwt v5`    |
+| Database         | PostgreSQL 16 · `pgx/v5` connection pool       |
+| Cache            | Redis · sliding-window rate limiting + phone cache |
+| Payments         | Stripe (`stripe-go/v76`)                       |
+| Image Storage    | Cloudinary (`cloudinary-go/v2`)                |
 | Frontend         | React 19 · Vite 8 · React Router 7            |
 | Styling          | Tailwind CSS v4 · shadcn/ui (Base UI variant)  |
 | Icons            | Lucide React                                    |
@@ -58,6 +61,7 @@ graph TD
     end
 
     Stripe["Stripe API\n(external)"]
+    Cloudinary["Cloudinary\n(image storage)"]
 
     Browser -- "HTTPS" --> FE
     FE -- "static files" --> Browser
@@ -65,11 +69,12 @@ graph TD
     BE -- "pgx/v5 SQL queries" --> PG
     BE -- "cache · rate limiting" --> RD
     BE -- "payment processing" --> Stripe
+    BE -- "image uploads" --> Cloudinary
     Repo -- "push to main\ntriggers redeploy" --> Railway
     Repo --> CI
 ```
 
-> The backend has **no public URL** — all browser traffic enters through nginx on the frontend service and is forwarded over Railway's private network.
+> The backend has **no public URL** — all browser traffic enters through nginx on the frontend service and is forwarded over Railway's private network. nginx reloads every 30 seconds to pick up new backend IPs after redeployments.
 
 ---
 
@@ -86,7 +91,7 @@ flowchart TD
     end
 
     subgraph Handler["Handler Layer"]
-        H["Decode JSON\nValidate input\nWrite HTTP response"]
+        H["Decode JSON\nValidate input\nWrite HTTP response\n+ fire audit event"]
     end
 
     subgraph Service["Service Layer"]
@@ -116,7 +121,7 @@ sequenceDiagram
 
     A->>DB: SELECT FOR UPDATE (stock = 1)
     B->>DB: SELECT FOR UPDATE (stock = 1)
-    Note over DB: User A gets lockUser B blocked, waiting
+    Note over DB: User A gets lock — User B blocked, waiting
 
     DB-->>A: Lock acquired, stock = 1
     A->>A: Stock OK (1 ≥ 1)
@@ -126,7 +131,7 @@ sequenceDiagram
     DB-->>B: Lock acquired, stock = 0
     B->>B: Stock = 0, validation fails
     B-->>B: Return out-of-stock error
-``` 
+```
 
 ---
 
@@ -134,11 +139,12 @@ sequenceDiagram
 
 | Layer | Responsibility |
 |---|---|
-| **Handler** | Decode request, call service, write JSON response |
+| **Handler** | Decode request, call service, write JSON response, emit audit event |
 | **Service** | Business rules, validation, orchestration |
 | **Repository (interface)** | Decouples business logic from storage |
 | **postgres/ impl** | pgx queries against PostgreSQL |
 | **PhoneCache** | Optional Redis cache; falls back gracefully if unavailable |
+| **AuditService** | Async fire-and-forget event logging to `audit_logs` table |
 
 The frontend uses **React Context** for global auth state and a thin **API client** (`src/api/client.js`) that proxies all requests through nginx in production (or Vite's dev-server proxy locally).
 
@@ -149,82 +155,90 @@ The frontend uses **React Context** for global auth state and a thin **API clien
 ```
 CS464-g1t10-project/
 ├── tests/
-│   └── load_test.js             # k6 load & rate-limit tests
+│   └── load_test.js                  # k6 load & rate-limit tests
 ├── backend/
 │   ├── cmd/api/
-│   │   └── main.go                  # Entry point; seeds admin on startup
+│   │   └── main.go                   # Entry point; seeds admin, ensures audit table
 │   ├── internal/
 │   │   ├── handler/
-│   │   │   ├── auth_handler.go      # Register / Login
-│   │   │   ├── phone_handler.go     # Phone CRUD
-│   │   │   ├── cart_handler.go      # Cart get/add/remove
-│   │   │   ├── payment_handler.go   # Stripe payment processing
-│   │   │   └── order_handler.go     # Order history
+│   │   │   ├── auth_handler.go       # Register / Login
+│   │   │   ├── phone_handler.go      # Phone CRUD
+│   │   │   ├── cart_handler.go       # Cart get/add/remove
+│   │   │   ├── payment_handler.go    # Stripe payment processing
+│   │   │   ├── order_handler.go      # Order history
+│   │   │   ├── upload_handler.go     # Cloudinary image upload
+│   │   │   ├── audit_handler.go      # Audit log viewer (admin)
+│   │   │   └── helpers.go            # clientIP helper
 │   │   ├── middleware/
-│   │   │   └── auth.go              # JWT RequireAuth / RequireAdmin
+│   │   │   └── auth.go               # JWT RequireAuth / RequireAdmin
 │   │   ├── model/
 │   │   │   ├── user.go
 │   │   │   ├── phone.go
 │   │   │   ├── cart.go
-│   │   │   └── order.go
+│   │   │   ├── order.go
+│   │   │   └── audit_log.go
 │   │   ├── repository/
-│   │   │   ├── user_repository.go   # Repository interfaces + in-memory implementations
-│   │   │   ├── phone_repository.go
-│   │   │   ├── cart_repository.go
-│   │   │   ├── order_repository.go
-│   │   │   └── postgres/            # PostgreSQL implementations
+│   │   │   ├── user_repo.go          # Repository interfaces
+│   │   │   ├── phone_repo.go
+│   │   │   ├── cart_repo.go
+│   │   │   ├── order_repo.go
+│   │   │   ├── audit_log_repo.go
+│   │   │   ├── phone_cache.go        # Redis phone cache
+│   │   │   └── postgres/             # PostgreSQL implementations
 │   │   │       ├── user_repository.go
 │   │   │       ├── phone_repository.go
 │   │   │       ├── cart_repository.go
-│   │   │       └── order_repository.go
+│   │   │       ├── order_repository.go
+│   │   │       └── audit_log_repository.go
 │   │   ├── router/
-│   │   │   └── router.go            # Route registration
+│   │   │   └── router.go             # Route registration
 │   │   └── service/
 │   │       ├── auth_service.go
 │   │       ├── phone_service.go
 │   │       ├── cart_service.go
 │   │       ├── payment_service.go
-│   │       └── order_service.go
-│   ├── migrations/
-│   │   └── 001_init.sql             # Schema (applied automatically on first Docker startup)
+│   │       ├── order_service.go
+│   │       └── audit_service.go
+│   ├── migration/
+│   │   └── 001_init.sql              # Schema + seed phones
 │   ├── Dockerfile
 │   ├── docker-compose.yml
-│   ├── .dockerignore
-│   ├── go.mod
-│   └── phones-api.postman_collection.json
+│   └── go.mod
 │
 └── frontend/
-    ├── index.html
+    ├── nginx.conf.template            # nginx config template
+    ├── start.sh                       # Startup script — periodic nginx reload
+    ├── Dockerfile
     ├── vite.config.js
-    ├── src/
-    │   ├── App.jsx                  # Router + top-level layout
-    │   ├── main.jsx
-    │   ├── api/
-    │   │   └── client.js            # Typed API wrappers
-    │   ├── components/
-    │   │   ├── Navbar.jsx
-    │   │   ├── ProtectedRoute.jsx   # Auth + admin route guards
-    │   │   └── ui/                  # shadcn components
-    │   ├── context/
-    │   │   └── AuthContext.jsx      # JWT storage + auth state
-    │   └── pages/
-    │       ├── Home.jsx             # Phone listing + search
-    │       ├── PhoneDetail.jsx      # Single phone + add to cart
-    │       ├── Login.jsx
-    │       ├── Register.jsx
-    │       ├── Cart.jsx             # Cart management
-    │       ├── Checkout.jsx         # Payment and checkout
-    │       ├── Orders.jsx           # Order history
-    │       ├── OrderDetail.jsx      # Order details
-    │       └── Admin.jsx            # Admin CRUD panel
-    └── package.json
+    └── src/
+        ├── App.jsx                    # Router + top-level layout
+        ├── main.jsx
+        ├── api/
+        │   └── client.js              # Typed API wrappers
+        ├── components/
+        │   ├── Navbar.jsx
+        │   ├── ProtectedRoute.jsx     # Auth + admin route guards
+        │   └── ui/                    # shadcn components
+        ├── context/
+        │   └── AuthContext.jsx        # JWT storage + auth state
+        └── pages/
+            ├── Home.jsx               # Phone listing + search
+            ├── PhoneDetail.jsx        # Single phone + add to cart
+            ├── Login.jsx
+            ├── Register.jsx
+            ├── Cart.jsx               # Cart management
+            ├── Checkout.jsx           # Stripe payment checkout
+            ├── Orders.jsx             # Order history
+            ├── OrderDetail.jsx        # Order details
+            ├── Admin.jsx              # Admin CRUD panel + image upload
+            └── AuditLog.jsx           # Admin audit log viewer
 ```
 
 ---
 
 ## Database Schema
 
-The schema is applied automatically on first Docker startup via `backend/migrations/001_init.sql`.
+The base schema is in `backend/migration/001_init.sql`. The `audit_logs` table is created automatically at startup (`CREATE TABLE IF NOT EXISTS`).
 
 ### `users`
 
@@ -239,7 +253,7 @@ The schema is applied automatically on first Docker startup via `backend/migrati
 | `state`        | VARCHAR(100) |                               |
 | `country`      | VARCHAR(100) |                               |
 | `zip_code`     | VARCHAR(20)  |                               |
-| `role`         | VARCHAR(20)  | `'customer'` or `'admin'` |
+| `role`         | VARCHAR(20)  | `'customer'` or `'admin'`   |
 
 ### `phones`
 
@@ -251,7 +265,7 @@ The schema is applied automatically on first Docker startup via `backend/migrati
 | `price`       | NUMERIC(10,2) | Required  |
 | `stock`       | INT           | Default 0 |
 | `description` | TEXT          |           |
-| `image_url`   | TEXT          |           |
+| `image_url`   | TEXT          | Cloudinary URL or static path |
 
 ### `carts`
 
@@ -266,31 +280,44 @@ The schema is applied automatically on first Docker startup via `backend/migrati
 | Column       | Type          | Notes                                          |
 | ------------ | ------------- | ---------------------------------------------- |
 | `id`       | SERIAL PK     |                                                |
-| `cart_id`  | INT FK        | References `carts(id)` — cascades on delete |
+| `cart_id`  | INT FK        | References `carts(id)` — cascades on delete  |
 | `phone_id` | INT FK        | References `phones(id)`                      |
 | `quantity` | INT           | Required                                       |
 | `price`    | NUMERIC(10,2) | Price at time of add                           |
 
 ### `orders`
 
-| Column      | Type           | Notes                     |
-| ----------- | -------------- | ------------------------- |
-| `id`      | TEXT PK        | Stripe payment intent ID  |
-| `user_id` | INT FK         | References `users(id)`  |
-| `status`  | VARCHAR(20)    | Default `'succeeded'`  |
-| `total`   | NUMERIC(10,2)  | Order total               |
-| `created_at` | TIMESTAMP   | Order creation time       |
+| Column         | Type          | Notes                    |
+| -------------- | ------------- | ------------------------ |
+| `id`         | TEXT PK       | Stripe payment intent ID |
+| `user_id`    | INT FK        | References `users(id)` |
+| `status`     | VARCHAR(20)   | Default `'succeeded'`  |
+| `total`      | NUMERIC(10,2) | Order total              |
+| `created_at` | TIMESTAMP     | Order creation time      |
 
 ### `order_items`
 
-| Column       | Type          | Notes                        |
-| ------------ | ------------- | ---------------------------- |
-| `id`       | SERIAL PK     |                              |
-| `order_id` | TEXT FK       | References `orders(id)`    |
-| `phone_id` | INT FK        | References `phones(id)`    |
-| `phone_name` | TEXT        | Phone model at time of order |
-| `quantity` | INT           | Required                     |
-| `price`    | NUMERIC(10,2) | Price at time of order      |
+| Column         | Type          | Notes                        |
+| -------------- | ------------- | ---------------------------- |
+| `id`         | SERIAL PK     |                              |
+| `order_id`   | TEXT FK       | References `orders(id)`    |
+| `phone_id`   | INT FK        | References `phones(id)`    |
+| `phone_name` | TEXT          | Phone model at time of order |
+| `quantity`   | INT           | Required                     |
+| `price`      | NUMERIC(10,2) | Price at time of order       |
+
+### `audit_logs` *(auto-created at startup)*
+
+| Column          | Type         | Notes                             |
+| --------------- | ------------ | --------------------------------- |
+| `id`          | SERIAL PK    |                                   |
+| `user_id`     | INT FK       | References `users(id)` — nullable |
+| `action`      | VARCHAR(64)  | e.g. `phone.created`, `user.login_failed` |
+| `resource_type` | VARCHAR(32) | e.g. `phone`, `user`, `order`   |
+| `resource_id` | VARCHAR(64)  | ID of the affected resource       |
+| `details`     | JSONB        | Action-specific metadata          |
+| `ip_address`  | VARCHAR(45)  | Client IP (respects proxy headers) |
+| `created_at`  | TIMESTAMPTZ  | Event timestamp                   |
 
 ---
 
@@ -352,21 +379,18 @@ Authorization: Bearer <jwt_token>
 | PUT    | `/phones/{id}` | Admin only | Update a phone listing |
 | DELETE | `/phones/{id}` | Admin only | Delete a phone listing |
 
-**GET `/phones`**
+---
 
-```json
-// Response 200
-[
-  { "id": 1, "brand": "Apple", "model": "iPhone 15", "price": 799.99, "stock": 10, "description": "..." }
-]
+### Upload
+
+| Method | Path       | Auth       | Description                              |
+| ------ | ---------- | ---------- | ---------------------------------------- |
+| POST   | `/upload` | Admin only | Upload an image to Cloudinary, returns URL |
+
 ```
-
-**POST `/phones`** (Admin)
-
-```json
-// Request body
-{ "brand": "Samsung", "model": "Galaxy S24", "price": 699.99, "stock": 5, "description": "..." }
-// Response 201 — created phone object
+// multipart/form-data with field: image
+// Response 200
+{ "url": "https://res.cloudinary.com/..." }
 ```
 
 ---
@@ -375,50 +399,36 @@ Authorization: Bearer <jwt_token>
 
 All cart routes require authentication.
 
-| Method | Path               | Auth          | Description                        |
-| ------ | ------------------ | ------------- | ---------------------------------- |
-| GET    | `/cart`          | Authenticated | Get current user's cart            |
-| POST   | `/cart`          | Authenticated | Add item to cart                   |
-| DELETE | `/cart/{itemId}` | Authenticated | Remove item from cart              |
-
-**GET `/cart`**
-
-```json
-// Response 200
-{
-  "id": 3,
-  "user_id": 2,
-  "status": "active",
-  "items": [
-    { "id": 7, "cart_id": 3, "phone_id": 1, "quantity": 2, "price": 799.99 }
-  ]
-}
-```
-
-**POST `/cart`**
-
-```json
-// Request body
-{ "phone_id": 1, "quantity": 1 }
-// Response 201 — cart item object
-```
+| Method | Path               | Auth          | Description                 |
+| ------ | ------------------ | ------------- | --------------------------- |
+| GET    | `/cart`          | Authenticated | Get current user's cart     |
+| POST   | `/cart`          | Authenticated | Add item to cart            |
+| DELETE | `/cart/{itemId}` | Authenticated | Remove item from cart       |
 
 ---
 
 ### Payment
 
-| Method | Path | Auth          | Description                     |
-| ------ | ---- | ------------- | ------------------------------- |
+| Method | Path     | Auth          | Description                     |
+| ------ | -------- | ------------- | ------------------------------- |
 | POST   | `/pay` | Authenticated | Process Stripe payment for cart |
 
 ---
 
 ### Orders
 
-| Method | Path              | Auth          | Description               |
-| ------ | ----------------- | ------------- | ------------------------- |
-| GET    | `/orders`       | Authenticated | List user's order history |
-| GET    | `/orders/{id}`   | Authenticated | Get order details by ID   |
+| Method | Path             | Auth          | Description               |
+| ------ | ---------------- | ------------- | ------------------------- |
+| GET    | `/orders`      | Authenticated | List user's order history |
+| GET    | `/orders/{id}` | Authenticated | Get order details by ID   |
+
+---
+
+### Audit Log
+
+| Method | Path            | Auth       | Description                              |
+| ------ | --------------- | ---------- | ---------------------------------------- |
+| GET    | `/audit-logs` | Admin only | Recent audit events, newest first. Supports `?limit=` and `?offset=` |
 
 ---
 
@@ -456,9 +466,10 @@ docker compose up --build -d
 This will:
 
 1. Build the Go binary inside a Docker build stage
-2. Start a PostgreSQL 16 container and automatically run `migrations/001_init.sql`
+2. Start a PostgreSQL 16 container and automatically run `migration/001_init.sql`
 3. Start the API container once the database is healthy
 4. Seed an `admin` user using the `ADMIN_PASSWORD` environment variable
+5. Create the `audit_logs` table if it does not already exist
 
 Verify it is running:
 
@@ -470,6 +481,7 @@ You should see:
 
 ```
 Connected to database
+audit_logs table ready
 Admin user seeded
 Server running on :8080
 ```
@@ -514,7 +526,7 @@ export DATABASE_URL="postgres://postgres:password@localhost:5432/phones_db"
 export JWT_SECRET="your-secret-key"
 export ADMIN_PASSWORD="adminpassword"
 
-psql -U postgres -d phones_db -f migrations/001_init.sql
+psql -U postgres -d phones_db -f migration/001_init.sql
 go run ./cmd/api
 ```
 
@@ -522,11 +534,24 @@ go run ./cmd/api
 
 ## Environment Variables
 
-| Variable           | Required | Description                                                           |
-| ------------------ | -------- | --------------------------------------------------------------------- |
-| `DATABASE_URL`   | Yes      | PostgreSQL DSN, e.g.`postgres://user:pass@localhost:5432/phones_db` |
-| `JWT_SECRET`     | Yes      | Secret used to sign JWT tokens — change this in production           |
-| `ADMIN_PASSWORD` | Yes      | Password for the seeded `admin` account                             |
+### Backend
+
+| Variable              | Required | Description                                                             |
+| --------------------- | -------- | ----------------------------------------------------------------------- |
+| `DATABASE_URL`      | Yes      | PostgreSQL DSN, e.g. `postgres://user:pass@localhost:5432/phones_db`  |
+| `JWT_SECRET`        | Yes      | Secret used to sign JWT tokens — change this in production             |
+| `ADMIN_PASSWORD`    | Yes      | Password for the seeded `admin` account                               |
+| `STRIPE_SECRET_KEY` | Yes      | Stripe secret key for payment processing                               |
+| `CLOUDINARY_URL`    | Yes      | Cloudinary DSN — format: `cloudinary://API_KEY:API_SECRET@CLOUD_NAME` |
+| `REDIS_URL`         | No       | Redis connection URL — caching and rate limiting disabled if absent    |
+| `STRIPE_CURRENCY`   | No       | Payment currency code (default: `sgd`)                               |
+| `ALLOWED_ORIGIN`    | No       | CORS allowed origin (default: `*`)                                   |
+
+### Frontend (build-time)
+
+| Variable        | Required | Description                                            |
+| --------------- | -------- | ------------------------------------------------------ |
+| `VITE_API_URL` | No       | API base URL (default: `/api` — proxied through nginx) |
 
 ---
 
@@ -564,24 +589,30 @@ The frontend stores the token in `localStorage` and automatically attaches it to
   - Register and log in
   - Browse the phone catalog with live search by brand or model
   - View phone details, stock availability, and description
-  - Add phones to cart
+  - Add phones to cart (race-condition safe via `SELECT FOR UPDATE`)
   - Remove individual items from cart
   - Checkout cart with Stripe payment integration
   - View order history and order details
+
 - **Admin**
 
   - All customer features
   - Create, edit, and delete phone listings from the Admin panel
-  - Role assigned at account seed time (admin) or via direct database update
+  - Upload product images via Cloudinary (file picker + live preview, or paste a URL)
+  - View a live audit log of all system events at `/audit-logs`
+  - Role assigned at account seed time or via direct database update
+
 - **General**
 
   - JWT-based stateless authentication
   - Role-based access control enforced on both backend middleware and frontend route guards
   - Password hashing with bcrypt
+  - Audit logging — key events (logins, catalog changes, payments) recorded asynchronously to `audit_logs`
+  - Redis caching for phone catalog (10-minute TTL, invalidated on write)
+  - Sliding-window rate limiting via Redis (global + per-user limits on sensitive endpoints)
   - Responsive UI with dark-mode CSS variables
   - Fully containerised backend and database with Docker
-  - Race-condition safe cart - adding to cart uses SELECT FOR UPDATE to prevent two users claiming the last unit simultaneously
-  - Stock deduction only after successful payment via Stripe
+  - Stock deduction only after successful Stripe payment
 
 ---
 

@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ShoppingCart, Shield, Smartphone, ChevronDown, LogOut, ShoppingBag } from 'lucide-react';
+import { ShoppingCart, Shield, ShieldAlert, Smartphone, ChevronDown, LogOut, ShoppingBag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Navbar() {
@@ -42,9 +42,14 @@ export default function Navbar() {
           )}
 
           {isAdmin && (
-            <Link to="/admin" className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'gap-1')}>
-              <Shield className="h-4 w-4" /> Admin
-            </Link>
+            <>
+              <Link to="/admin" className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'gap-1')}>
+                <Shield className="h-4 w-4" /> Admin
+              </Link>
+              <Link to="/audit-logs" className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'gap-1')}>
+                <ShieldAlert className="h-4 w-4" /> Audit
+              </Link>
+            </>
           )}
 
           <Separator orientation="vertical" className="h-6 mx-2" />
