@@ -16,7 +16,7 @@ server {
 
     # Health check proxy - exposes backend /health publicly via the frontend domain
     location /health {
-        proxy_pass http://${RESOLVED_BACKEND}/health;
+        proxy_pass http://${BACKEND_URL}/health;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -26,7 +26,7 @@ server {
 
     # API proxy - forwards to backend via Railway private network (strips /api prefix)
     location /api/ {
-        proxy_pass http://${RESOLVED_BACKEND}/;
+        proxy_pass http://${BACKEND_URL}/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
