@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -14,9 +15,10 @@ import (
 
 // PaymentService handles Stripe payment processing and order creation
 type PaymentService struct {
-	cartRepo  repository.CartRepo  // Interface to access cart data
-	phoneRepo repository.PhoneRepo // Interface to access phone data
-	orderRepo repository.OrderRepo // Interface to persist orders
+	cartRepo   repository.CartRepo   // Interface to access cart data
+	phoneRepo  repository.PhoneRepo  // Interface to access phone data
+	orderRepo  repository.OrderRepo  // Interface to persist orders
+	phoneCache *repository.PhoneCache // Cache to invalidate after stock deduction
 }
 
 // Constructor — sets the Stripe secret key from environment on startup
@@ -24,12 +26,14 @@ func NewPaymentService(
 	cartRepo repository.CartRepo,
 	phoneRepo repository.PhoneRepo,
 	orderRepo repository.OrderRepo,
+	phoneCache *repository.PhoneCache,
 ) *PaymentService {
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 	return &PaymentService{
-		cartRepo:  cartRepo,
-		phoneRepo: phoneRepo,
-		orderRepo: orderRepo,
+		cartRepo:   cartRepo,
+		phoneRepo:  phoneRepo,
+		orderRepo:  orderRepo,
+		phoneCache: phoneCache,
 	}
 }
 
@@ -106,6 +110,14 @@ func (s *PaymentService) ProcessPayment(userID int, req PaymentRequest) (Payment
 	if err := s.cartRepo.CheckoutCart(cart.ID, cart.Items); err != nil {
 		// Payment succeeded but checkout failed — in production issue a Stripe refund here
 		return PaymentResult{}, errors.New("payment succeeded but checkout failed: " + err.Error())
+	}
+
+	// Invalidate Redis cache for every phone whose stock just changed so the
+	// next GET /phones request reflects the real post-checkout stock values.
+	ctx := context.Background()
+	s.phoneCache.Clear(ctx)
+	for _, item := range cart.Items {
+		s.phoneCache.ClearByID(ctx, item.PhoneID)
 	}
 
 	// Build order items from cart items

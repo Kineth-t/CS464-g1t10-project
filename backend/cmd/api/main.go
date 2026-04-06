@@ -68,7 +68,7 @@ func main() {
 	phoneSvc := service.NewPhoneService(phoneRepo, phoneCache)
 	authSvc := service.NewAuthService(userRepo)
 	cartSvc := service.NewCartService(cartRepo, phoneRepo)
-	paymentSvc := service.NewPaymentService(cartRepo, phoneRepo, orderRepo)
+	paymentSvc := service.NewPaymentService(cartRepo, phoneRepo, orderRepo, phoneCache)
 	orderSvc := service.NewOrderService(orderRepo)
 	auditSvc := service.NewAuditService(auditRepo)
 
