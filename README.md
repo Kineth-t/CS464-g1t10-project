@@ -78,6 +78,21 @@ graph TD
 
 ---
 
+### Backend Layer
+
+| Layer | Responsibility |
+|---|---|
+| **Handler** | Decode request, call service, write JSON response, emit audit event |
+| **Service** | Business rules, validation, orchestration |
+| **Repository (interface)** | Decouples business logic from storage |
+| **postgres/ impl** | pgx queries against PostgreSQL |
+| **PhoneCache** | Optional Redis cache; falls back gracefully if unavailable |
+| **AuditService** | Async fire-and-forget event logging to `audit_logs` table |
+
+The frontend uses **React Context** for global auth state and a thin **API client** (`src/api/client.js`) that proxies all requests through nginx in production (or Vite's dev-server proxy locally).
+
+---
+
 ### Backend Request Flow
 
 ```mermaid
@@ -132,21 +147,6 @@ sequenceDiagram
     B->>B: Stock = 0, validation fails
     B-->>B: Return out-of-stock error
 ```
-
----
-
-### Backend Layer Summary
-
-| Layer | Responsibility |
-|---|---|
-| **Handler** | Decode request, call service, write JSON response, emit audit event |
-| **Service** | Business rules, validation, orchestration |
-| **Repository (interface)** | Decouples business logic from storage |
-| **postgres/ impl** | pgx queries against PostgreSQL |
-| **PhoneCache** | Optional Redis cache; falls back gracefully if unavailable |
-| **AuditService** | Async fire-and-forget event logging to `audit_logs` table |
-
-The frontend uses **React Context** for global auth state and a thin **API client** (`src/api/client.js`) that proxies all requests through nginx in production (or Vite's dev-server proxy locally).
 
 ---
 
