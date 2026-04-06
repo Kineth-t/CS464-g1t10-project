@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"  // For JSON encoding/decoding
 	"net/http"       // HTTP server utilities
+	"log/slog"
 	"strconv"        // Convert string → int
 	"strings"        // String manipulation
 
@@ -77,6 +78,13 @@ func (h *CartHandler) AddToCart(w http.ResponseWriter, r *http.Request) {
 	// Call service to add item into cart
 	item, err := h.service.AddToCart(userID, body.PhoneID, body.Quantity)
 	if err != nil {
+		// Log specifically WHY it failed
+		slog.Warn("add_to_cart failed", 
+            "user_id", userID, 
+            "phone_id", body.PhoneID, 
+            "quantity", body.Quantity, 
+            "error", err.Error(),
+        )
 		// Handle validation errors (e.g., invalid phone ID, stock issues)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -110,6 +118,12 @@ func (h *CartHandler) RemoveFromCart(w http.ResponseWriter, r *http.Request) {
 	// Convert string ID to integer
 	itemID, err := strconv.Atoi(idStr)
 	if err != nil {
+		slog.Error("failed to remove item from cart", 
+            "user_id", userID, 
+            "item_id", itemID,
+			"error", err.Error(),
+        )
+
 		http.Error(w, "invalid item id", http.StatusBadRequest)
 		return
 	}
@@ -120,6 +134,8 @@ func (h *CartHandler) RemoveFromCart(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
+
+	slog.Info("item removed from cart", "user_id", userID, "item_id", itemID)
 
 	// Return 204 No Content (successful deletion, no response body)
 	w.WriteHeader(http.StatusNoContent)

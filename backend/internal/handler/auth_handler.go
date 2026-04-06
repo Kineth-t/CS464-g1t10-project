@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
-
+	"log/slog"
 	"github.com/Kineth-t/CS464-g1t10-project/internal/model"
 	"github.com/Kineth-t/CS464-g1t10-project/internal/service"
 )
@@ -60,6 +60,11 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// If successful, return HTTP 201 Created
 	w.WriteHeader(http.StatusCreated)
 
+	slog.Info("new user registered", 
+	"username", body.Username, 
+	"phone", body.PhoneNumber,
+	)
+
 	// Encode the created user as JSON in the response
 	json.NewEncoder(w).Encode(user)
 }
@@ -76,29 +81,39 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 // @Failure      401  {string}  string "invalid credentials"
 // @Router       /auth/login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	// Temporary struct to store login credentials from request body
-	var body struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}
+    var body struct {
+        Username string `json:"username"`
+        Password string `json:"password"`
+    }
 
-	// Decode incoming JSON into struct
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		// Return 400 if request body is invalid
-		http.Error(w, "invalid body", http.StatusBadRequest)
-		return
-	}
+    if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+        http.Error(w, "invalid body", http.StatusBadRequest)
+        return
+    }
 
-	// Call service layer to authenticate user
-	token, err := h.service.Login(body.Username, body.Password)
-	if err != nil {
-		// If authentication fails, return 401 Unauthorized
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
+    token, err := h.service.Login(body.Username, body.Password)
+    if err != nil {
+        // 1. Get the real IP address
+        userIP := r.Header.Get("X-Forwarded-For")
+        if userIP == "" {
+            userIP = r.RemoteAddr
+        }
 
-	// Return the generated token as JSON
-	json.NewEncoder(w).Encode(map[string]string{
-		"token": token,
-	})
+        // 2. Log the failure (Fixed: use 'body.Username' and 'userIP')
+        slog.Warn("login failed",
+            "username",  body.Username, // Changed from req.Username
+            "ip_address", userIP,        // Used the variable we defined above
+            "error",      err.Error(),
+        )
+
+        http.Error(w, err.Error(), http.StatusUnauthorized)
+        return
+    }
+
+    // Optional: Log successful logins too!
+    slog.Info("login successful", "username", body.Username)
+
+    json.NewEncoder(w).Encode(map[string]string{
+        "token": token,
+    })
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"log/slog"
 
 	"github.com/Kineth-t/CS464-g1t10-project/internal/middleware"
 	"github.com/Kineth-t/CS464-g1t10-project/internal/service"
@@ -25,9 +26,13 @@ func (h *OrderHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 
 	orders, err := h.service.GetOrders(userID)
 	if err != nil {
+		slog.Error("failed to fetch user orders", "user_id", userID, "error", err.Error())
+		
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	slog.Debug("user orders retrieved", "user_id", userID, "count", len(orders))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(orders)
@@ -40,15 +45,21 @@ func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
 	// Order ID is a Stripe pi_xxx string, not an integer
 	orderID := strings.TrimPrefix(r.URL.Path, "/orders/")
 	if orderID == "" {
+		slog.Warn("get_order failed: empty order_id", "user_id", userID)
+
 		http.Error(w, "invalid order id", http.StatusBadRequest)
 		return
 	}
 
 	order, err := h.service.GetOrder(userID, orderID)
 	if err != nil {
+		slog.Warn("order lookup failed", "user_id", userID, "order_id", orderID, "error", err.Error())
+
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
+
+	slog.Info("order details retrieved", "user_id", userID, "order_id", orderID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(order)

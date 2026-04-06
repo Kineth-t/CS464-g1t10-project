@@ -16,7 +16,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -34,16 +34,25 @@ import (
 )
 
 func main() {
+	initLogger()
+
+	port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080"
+    }
+
 	db, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
-		log.Fatal("failed to connect to database:", err)
+		slog.Error("failed to connect to database", "error", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
 	if err := db.Ping(context.Background()); err != nil {
-		log.Fatal("database unreachable:", err)
+		slog.Error("database unreachable", "error", err)
+        os.Exit(1)
 	}
-	log.Println("Connected to database")
+	slog.Info("connected to database")
 
 	// Call your helper to get the Redis client
 	rdb := initRedis()
@@ -56,12 +65,13 @@ func main() {
 	userRepo := pg.NewUserRepository(db)
 	cartRepo := pg.NewCartRepository(db)
 	orderRepo := pg.NewOrderRepository(db)
+	auditRepo := pg.NewAuditRepository(db)
 
 	// Cache
 	phoneCache := repository.NewPhoneCache(rdb)
 
 	// Services
-	phoneSvc := service.NewPhoneService(phoneRepo, phoneCache)
+	phoneSvc := service.NewPhoneService(phoneRepo, phoneCache, auditRepo)
 	authSvc := service.NewAuthService(userRepo)
 	cartSvc := service.NewCartService(cartRepo, phoneRepo)
 	paymentSvc := service.NewPaymentService(cartRepo, phoneRepo, orderRepo)
@@ -82,32 +92,31 @@ func main() {
 	r := router.Setup(ph, ah, ch, pyh, oh, hh, uh, rdb)
 
 	server := &http.Server{
-		Addr:         ":8080",
+		Addr:         ":" + port,
 		Handler:      r,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
 	}
 
-	log.Println("----------------------------------------")
-	log.Println("  Ringr Mobile API")
-	log.Println("  http://localhost:8080")
-	log.Println("  Swagger UI: http://localhost:8080/swagger/index.html")
-	log.Println("----------------------------------------")
-	log.Fatal(server.ListenAndServe())
+	slog.Info("Ringr Mobile API starting", "port", port, "swagger", "http://localhost:"+port+"/swagger/index.html")
+
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+        slog.Error("server failed to start", "error", err)
+        os.Exit(1)
+    }
 }
 
 func initRedis() *redis.Client {
 	url := os.Getenv("REDIS_URL")
 	if url == "" {
-		log.Println("Redis not configured, caching disabled")
+		slog.Warn("Redis not configured, caching disabled")
 		return nil
 	}
 
 	opts, err := redis.ParseURL(url)
 	if err != nil {
-		log.Printf("Invalid Redis URL: %v", err)
-		log.Println("Redis disabled")
+		slog.Error("Invalid Redis URL", "error", err)
 		return nil
 	}
 
@@ -122,13 +131,29 @@ func initRedis() *redis.Client {
 	defer cancel()
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
-		log.Printf("Redis unreachable: %v", err)
-		log.Println("Redis disabled")
+		slog.Warn("Redis unreachable", "error", err)
 		return nil
 	}
 
-	log.Println("Connected to Redis")
+	// log.Println("Connected to Redis")
+
+	slog.Info("connected to redis", 
+    "url", url, 
+    "pool_size", opts.PoolSize,
+)
 	return rdb
+}
+
+func initLogger() {
+    // If we are on Railway, use JSON. If local, use readable Text.
+    var handler slog.Handler
+    if os.Getenv("RAILWAY_ENVIRONMENT") != "" || os.Getenv("PORT") != "" {
+        handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
+    } else {
+        handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
+    }
+    
+    slog.SetDefault(slog.New(handler))
 }
 
 func seedAdmin(repo *pg.UserRepository) {
@@ -144,8 +169,8 @@ func seedAdmin(repo *pg.UserRepository) {
 		Role:        model.RoleAdmin,
 	})
 	if err != nil {
-		log.Println("failed to seed admin:", err)
+		slog.Error("failed to seed admin", "error", err)
 		return
 	}
-	log.Println("Admin user seeded")
+	slog.Info("Admin user seeded")
 }

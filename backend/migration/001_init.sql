@@ -53,6 +53,20 @@ CREATE TABLE order_items (
     price      NUMERIC(10,2) NOT NULL
 );
 
+CREATE TABLE audit_logs (
+    id SERIAL PRIMARY KEY,
+    entity_type VARCHAR(50) NOT NULL,  -- e.g., 'phone'
+    entity_id INT NOT NULL,            -- ID of the phone being changed
+    action VARCHAR(50) NOT NULL,       -- 'price_update', 'stock_addition', 'created'
+    old_value JSONB,                   -- The value before the change
+    new_value JSONB,                   -- The value after the change
+    changed_by INT,                    -- UserID of the admin who did it
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index for fast searching by phone
+CREATE INDEX idx_audit_entity ON audit_logs (entity_type, entity_id);
+
 -- ================================================
 -- Seed phones (prices in SGD)
 -- ================================================

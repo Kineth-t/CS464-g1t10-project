@@ -5,6 +5,7 @@ import (
 	"net/http"       // HTTP server utilities
 	"strconv"        // Convert string → int
 	"strings"        // String manipulation
+	"log/slog"
 
 	"github.com/Kineth-t/CS464-g1t10-project/internal/model"
 	"github.com/Kineth-t/CS464-g1t10-project/internal/service"
@@ -86,6 +87,7 @@ func (h *PhoneHandler) CreatePhone(w http.ResponseWriter, r *http.Request) {
 
 	// Decode JSON request body into Phone struct
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		slog.Warn("phone creation failed: invalid body", "error", err.Error())
 		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
 	}
@@ -93,9 +95,12 @@ func (h *PhoneHandler) CreatePhone(w http.ResponseWriter, r *http.Request) {
 	// Call service to create phone
 	created, err := h.service.CreatePhone(p)
 	if err != nil {
+		slog.Error("failed to create phone", "model", p.Model, "error", err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	slog.Info("phone created successfully", "phone_id", created.ID, "model", created.Model)
 
 	// Return 201 Created
 	w.WriteHeader(http.StatusCreated)
@@ -123,6 +128,7 @@ func (h *PhoneHandler) UpdatePhone(w http.ResponseWriter, r *http.Request) {
 	// Extract ID from URL
 	id, err := strconv.Atoi(strings.TrimPrefix(r.URL.Path, "/phones/"))
 	if err != nil {
+		slog.Warn("phone lookup failed", "phone_id", id, "error", err.Error())
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
@@ -144,6 +150,8 @@ func (h *PhoneHandler) UpdatePhone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	slog.Debug("phone details fetched", "phone_id", id)
+
 	// Return updated phone
 	json.NewEncoder(w).Encode(p)
 }
@@ -164,15 +172,22 @@ func (h *PhoneHandler) DeletePhone(w http.ResponseWriter, r *http.Request) {
 	// Extract ID from URL
 	id, err := strconv.Atoi(strings.TrimPrefix(r.URL.Path, "/phones/"))
 	if err != nil {
+		slog.Warn("invalid phone id format for deletion", "input", id)
+
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
 
 	// Call service to delete
 	if err := h.service.DeletePhone(id); err != nil {
+
+		slog.Warn("phone deletion failed", "phone_id", id, "error", err.Error())
+
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
+
+	slog.Info("phone deleted successfully", "phone_id", id)
 
 	// Return 204 No Content (successful deletion)
 	w.WriteHeader(http.StatusNoContent)
